@@ -1,0 +1,41 @@
+---
+title: Error Handling
+slug: /guides/creating-clips/websocket-streaming/error-handling
+---
+
+WebSocket responses include structured error objects. Differentiate between connection-level failures and recoverable synthesis issues.
+
+## Unrecoverable Errors
+
+Connection handshake or authentication failures close the socket immediately.
+
+```json
+{
+  "type": "error",
+  "success": false,
+  "error_name": "ConnectionFailure",
+  "message": "Failed to establish a connection.",
+  "status_code": 401
+}
+```
+
+Typical causes: invalid token, plan lacks WebSocket access, network filtering.
+
+## Recoverable Errors
+
+Synthesis-level problems keep the socket open so your client can retry.
+
+```json
+{
+  "type": "error",
+  "success": false,
+  "error_name": "BadJSON",
+  "error_params": {
+    "explanation": "Provide your query to synthesize as text or SSML in the 'data' field"
+  },
+  "message": "Invalid JSON: Provide your query to synthesize as text or SSML in the 'data' field",
+  "status_code": 400
+}
+```
+
+Handle recoverable errors by logging `error_name`, inspecting `error_params`, and prompting the user to resend a corrected payload.

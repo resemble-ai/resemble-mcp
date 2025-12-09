@@ -1,0 +1,296 @@
+---
+title: SSML Reference
+slug: /getting-started/ssml
+---
+
+Resemble accepts Speech Synthesis Markup Language (SSML) so you can precisely control pronunciation, pacing, and style. Punctuation is handled automatically, but SSML tags unlock finer control such as emphasizing a word, spelling out acronyms, or inserting pauses.
+
+## Supported Elements
+
+| Element | Required | Summary |
+| --- | --- | --- |
+| [`<speak>`](#speak-root-element) | Yes | Root element for all SSML input. |
+| [`<prosody>`](#prosody) | No | Adjust pitch, rate, or volume for a span of text. |
+| [`<emphasis>`](#emphasis) | No | Apply preset emphasis levels (internal pitch/volume mix). |
+| [`<say-as>`](#say-as) | No | Interpret content as characters, numbers, etc. |
+| [`<sub>`](#sub) | No | Substitute alternate text for pronunciation. |
+| [`<break>`](#break) | No | Insert a timed pause. |
+| [`<lang>`](#lang) | No | Switch the language mid-utterance (voice must support it). |
+| [`<resemble:convert>`](#resembleconvert) | No | Perform speech-to-speech conversion against an input file. |
+
+## `<speak>` Root Element
+
+```xml
+<speak prompt="string" version="1.1"></speak>
+```
+
+| Attribute | Description |
+| --- | --- |
+| `version` | SSML spec version. Defaults to 1.1. |
+| `xml:lang` | Locale for the root document (e.g. `en`, `en-US`). |
+| `xmlns` | XML namespace. Defaults to `http://www.w3.org/TR/2010/REC-speech-synthesis11-20100907/synthesis.xsd`. |
+| `temperature` | Controls generation randomness (0.1–5.0). Defaults to 0.8. |
+| `exaggeration` | Emotion intensity (0.0–1.0). |
+| `seed` | Optional deterministic seed (non-negative integer). |
+| `prompt` | Primer text to steer delivery (e.g. `"Speak with excitement"`). |
+
+## `<prosody>`
+
+Use to modulate pitch, speaking rate, or volume.
+
+```xml
+<speak>
+  This part is normal.
+  <prosody pitch="x-high">This part is going to sound high pitched.</prosody>
+  <prosody rate="150%">This part is going to be spoken fast.</prosody>
+  <prosody volume="loud">And this part is loud.</prosody>
+</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_prosody.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `pitch` | Relative pitch (e.g. `+2st`, `x-high`). |
+| `rate` | Speaking rate as percentage or keywords (`slow`, `fast`). |
+| `volume` | Relative volume (`silent`, `x-soft`, `loud`, etc.). |
+
+## `<emphasis>`
+
+```xml
+<speak>
+  <emphasis level="reduced">I'm more of a shy person really.</emphasis>
+</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_emphasis.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `level` | `strong`, `moderate`, `reduced`, or `none` (default). |
+
+## `<say-as>`
+
+Spell out characters or indicate alternate interpretation.
+
+```xml
+<speak>
+  This <say-as interpret-as="characters">SSML</say-as> stuff is really cool.
+</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_say_as.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `interpret-as` | Supported type: `characters` (spells each character). |
+
+## `<sub>`
+
+```xml
+<speak>Hi <sub alias="Joe">Jim</sub>, we are calling today to inform you of your account activation with Resemble.</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_sub.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `alias` | Replacement text spoken instead of the enclosed text. |
+
+## `<break>`
+
+```xml
+<speak>This is going to be a long <break time="2s"/>pause.</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_break.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `time` | Duration of the pause (e.g. `500ms`, `2s`). |
+
+## `<lang>`
+
+Switch the language mid-stream if the voice supports it.
+
+```xml
+<speak>
+  Su vuelo a <lang xml:lang="en-US">Pearson International Airport</lang> partirá en 30 minutos.
+</speak>
+```
+
+<audio controls src="../../assets/audio/resemble_lang.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `xml:lang` | BCP 47 locale (see table below). |
+
+
+<Accordion title="Supported xml:lang Codes">
+
+| Language | Code |
+| --- | --- |
+| Afrikaans – South Africa | `af-za` |
+| Amharic – Ethiopia | `am-et` |
+| Arabic – United Arab Emirates | `ar-ae` |
+| Arabic – Egypt | `ar-eg` |
+| Arabic – Iraq | `ar-iq` |
+| Arabic – Kuwait | `ar-kw` |
+| Arabic – Morocco | `ar-ma` |
+| Arabic – Qatar | `ar-qa` |
+| Arabic – Saudi Arabia | `ar-sa` |
+| Azerbaijani – Azerbaijan | `az-az` |
+| Bulgarian – Bulgaria | `bg-bg` |
+| Bengali – Bangladesh | `bn-bd` |
+| Bengali – India | `bn-in` |
+| Bosnian – Bosnia | `bs-ba` |
+| Catalan – Spain | `ca-es` |
+| Mandarin – China | `cmn-cn` |
+| Czech – Czech Republic | `cs-cz` |
+| Danish – Denmark | `da-dk` |
+| German – Germany | `de-de` |
+| Greek – Greece | `el-gr` |
+| English – Australia | `en-au` |
+| English – Canada | `en-ca` |
+| English – United Kingdom | `en-gb` |
+| English – Hong Kong | `en-hk` |
+| English – Ireland | `en-ie` |
+| English – India | `en-in` |
+| English – Kenya | `en-ke` |
+| English – New Zealand | `en-nz` |
+| English – Singapore | `en-sg` |
+| English – United States | `en-us` |
+| English – South Africa | `en-za` |
+| Spanish – Argentina | `es-ar` |
+| Spanish – Chile | `es-cl` |
+| Spanish – Colombia | `es-co` |
+| Spanish – Costa Rica | `es-cr` |
+| Spanish – Cuba | `es-cu` |
+| Spanish – Dominican Republic | `es-do` |
+| Spanish – Ecuador | `es-ec` |
+| Spanish – Spain | `es-es` |
+| Spanish – Mexico | `es-mx` |
+| Spanish – Peru | `es-pe` |
+| Spanish – Puerto Rico | `es-pr` |
+| Spanish – Paraguay | `es-py` |
+| Spanish – United States | `es-us` |
+| Spanish – Venezuela | `es-ve` |
+| Estonian – Estonia | `et-ee` |
+| Basque – Spain | `eu-es` |
+| Persian – Iran | `fa-ir` |
+| Finnish – Finland | `fi-fi` |
+| Filipino – Philippines | `fil-ph` |
+| French – Belgium | `fr-be` |
+| French – Canada | `fr-ca` |
+| French – Switzerland | `fr-ch` |
+| French – France | `fr-fr` |
+| Irish – Ireland | `ga-ie` |
+| Gujarati – India | `gu-in` |
+| Hebrew – Israel | `he-il` |
+| Hindi – India | `hi-in` |
+| Croatian – Croatia | `hr-hr` |
+| Hungarian – Hungary | `hu-hu` |
+| Armenian – Armenia | `hy-am` |
+| Indonesian – Indonesia | `id-id` |
+| Icelandic – Iceland | `is-is` |
+| Italian – Italy | `it-it` |
+| Japanese – Japan | `ja-jp` |
+| Javanese – Indonesia | `jv-id` |
+| Kazakh – Kazakhstan | `kk-kz` |
+| Khmer – Cambodia | `km-kh` |
+| Kannada – India | `kn-in` |
+| Korean – South Korea | `ko-kr` |
+| Lithuanian – Lithuania | `lt-lt` |
+| Latvian – Latvia | `lv-lv` |
+| Malayalam – India | `ml-in` |
+| Mongolian – Mongolia | `mn-mn` |
+| Marathi – India | `mr-in` |
+| Malay – Malaysia | `ms-my` |
+| Maltese – Malta | `mt-mt` |
+| Burmese – Myanmar | `my-mm` |
+| Norwegian – Norway | `nb-no` |
+| Nepali – Nepal | `ne-np` |
+| Dutch – Belgium | `nl-be` |
+| Dutch – Netherlands | `nl-nl` |
+| Punjabi – India | `pa-in` |
+| Polish – Poland | `pl-pl` |
+| Pashto – Afghanistan | `ps-af` |
+| Portuguese – Brazil | `pt-br` |
+| Portuguese – Portugal | `pt-pt` |
+| Romanian – Romania | `ro-ro` |
+| Russian – Russia | `ru-ru` |
+| Sinhala – Sri Lanka | `si-lk` |
+| Slovak – Slovakia | `sk-sk` |
+| Slovenian – Slovenia | `sl-si` |
+| Somali – Somalia | `so-so` |
+| Albanian – Albania | `sq-al` |
+| Serbian – Serbia | `sr-rs` |
+| Swedish – Sweden | `sv-se` |
+| Swahili – Kenya | `sw-ke` |
+| Tamil – India | `ta-in` |
+| Tamil – Sri Lanka | `ta-lk` |
+| Tamil – Malaysia | `ta-my` |
+| Telugu – India | `te-in` |
+| Thai – Thailand | `th-th` |
+| Turkish – Turkey | `tr-tr` |
+| Ukrainian – Ukraine | `uk-ua` |
+| Urdu – Pakistan | `ur-pk` |
+| Vietnamese – Vietnam | `vi-vn` |
+| Chinese – China | `zh-cn` |
+| Chinese – Hong Kong | `zh-hk` |
+| Chinese – Taiwan | `zh-tw` |
+| Cantonese – China | `yue-cn` |
+| Zulu – South Africa | `zu-za` |
+
+</Accordion>
+
+## `<resemble:convert>`
+
+Performs speech-to-speech using a donor recording.
+
+> Maximum file size: 50 MB, maximum duration: 300 seconds. Files exceeding either limit are trimmed.
+
+```xml
+<speak>
+  <resemble:convert src="https://storage.googleapis.com/resemble-ai-docs-public-files/resemble_sts_donor_audio.wav" />
+</speak>
+```
+### Original Audio
+<audio controls src="../../assets/audio/resemble_sts_donor_audio.wav">Your browser does not support the audio element.</audio>
+
+### Converted Audio
+<audio controls src="../../assets/audio/resemble_sts_output_audio.wav">Your browser does not support the audio element.</audio>
+
+<br/>
+
+| Attribute | Description |
+| --- | --- |
+| `src` | HTTPS URL pointing to a WAV file with a single speaker. |
+| `pitch` | Optional float between -10.0 and 10.0 to transpose the output. |
+| `prompt` | Primer text to steer delivery (e.g. `"Speak in a British accent."`). **Note:** For STS, place `prompt` on the `<resemble:convert>` tag, not on `<speak>`. |
+
+### Prompting with Speech-to-Speech
+
+Unlike text-to-speech where the `prompt` attribute is placed on the `<speak>` root element, for speech-to-speech conversion you must place the `prompt` attribute directly on the `<resemble:convert>` tag:
+
+```xml
+<speak>
+  <resemble:convert
+    src="https://storage.googleapis.com/resemble-ai-docs-public-files/resemble_sts_donor_audio.wav"
+    prompt="Speak in a British accent." />
+</speak>
+```
+
+The prompt will guide how the donor audio is converted to the target voice, allowing you to adjust accent, tone, or delivery style.

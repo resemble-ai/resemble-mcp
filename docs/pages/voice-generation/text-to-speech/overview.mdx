@@ -1,0 +1,41 @@
+---
+title: Text-to-Speech
+slug: /voice-generation/text-to-speech
+---
+
+Turn text into natural, production-ready speech. Resemble supports multiple synthesis modes tuned for different latency and integration needs.
+
+## Synthesis Modes
+
+### [Synchronous](./text-to-speech/synchronous)
+
+Request-based synthesis that returns a complete audio file in a single response.
+
+Best suited for:
+- Alerts and notifications
+- Short-form content
+- Workflows that require the entire clip before progressing
+
+### [Streaming over HTTP](./text-to-speech/streaming-http)
+
+Receive audio chunks progressively via chunked HTTP responses.
+
+Best suited for:
+- Longer scripts
+- Progressive playback experiences
+- Reducing perceived latency without persistent sockets
+
+### [Streaming over WebSocket](./text-to-speech/streaming-websocket)
+
+Maintain a WebSocket to receive the lowest-latency audio stream with per-chunk metadata.
+
+Best suited for:
+- Conversational agents
+- Interactive assistants
+- Real-time media experiences where milliseconds matter (Business plan and above)
+
+## Next Steps
+
+1. Generate an API token from the dashboard.
+2. Pick the synthesis mode that fits your UX.
+3. Follow the dedicated page for request/response formats and implementation tips.

@@ -1,0 +1,76 @@
+---
+title: Custom Voice from Voice Design
+slug: /guides/voice-design/how-to-create
+---
+
+Create a custom voice in two phases: generate candidate samples, then promote the one you like.
+
+## 1. Generate Samples
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voice-design' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'user_prompt=A middle-aged female with an Australian accent. She speaks with confidence and warmth at a moderate pace. Her tone is friendly and approachable, like a knowledgeable tour guide.'
+```
+
+Response:
+
+```json
+{
+  "voice_candidates": [
+    { "audio_url": "...", "voice_sample_index": 0, "uuid": "abcd1234" },
+    { "audio_url": "...", "voice_sample_index": 1, "uuid": "abcd1234" },
+    { "audio_url": "...", "voice_sample_index": 2, "uuid": "abcd1234" }
+  ]
+}
+```
+
+Each candidate shares the same `uuid` (the design request) and exposes a unique `voice_sample_index` (`0`, `1`, or `2`). Listen to the audio URLs and pick your favorite.
+
+## 2. Create the Voice
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voice-design/abcd1234/1/create_rapid_voice' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'voice_name=Australian Female'
+```
+
+Response:
+
+```json
+{ "voice_uuid": "1234567890" }
+```
+
+The returned `voice_uuid` is the actual voice asset; Resemble begins building it immediately.
+
+## 3. Monitor Build Status
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices/1234567890' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+The `status` field transitions from `initializing` → `running` → `finished`. Use the [Voices API](/voice-creation/voices/get) to check component readiness or visit the dashboard.
+
+## 4. Synthesize Audio
+
+Once finished, use the voice with standard synthesis endpoints:
+
+```bash
+curl --request POST 'https://f.cluster.resemble.ai/synthesize' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "voice_uuid": "1234567890",
+    "data": "Hello from Resemble!",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+Use the resulting `audio_content` (base64) or `audio_src` URL to retrieve the audio.
+
+## Troubleshooting
+
+- Prompts lacking detail may produce generic results—see [How to Prompt](./how-to-prompt).
+- If builds remain `running` for longer than expected, contact support with the `voice_uuid`.

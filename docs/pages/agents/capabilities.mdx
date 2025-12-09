@@ -1,0 +1,131 @@
+---
+title: Get Capabilities
+slug: /agents/capabilities
+---
+
+Retrieve all supported ASR, LLM, TTS, and Turn capabilities. Use this endpoint to discover valid provider/model combinations before creating agents.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/capabilities
+```
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/capabilities" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "capabilities": {
+    "asr": [
+      {
+        "provider": "deepgram",
+        "model": "nova-2",
+        "description": "Deepgram Nova-2 ASR model"
+      }
+    ],
+    "llm": [
+      {
+        "provider": "openai",
+        "model": "gpt-4o",
+        "description": "OpenAI GPT-4 Optimized"
+      },
+      {
+        "provider": "anthropic",
+        "model": "claude-3-5-sonnet-20241022",
+        "description": "Anthropic Claude 3.5 Sonnet"
+      }
+    ],
+    "tts": [
+      {
+        "provider": "resemble",
+        "description": "Resemble AI voice synthesis"
+      }
+    ],
+    "turn": [
+      {
+        "mode": "silence",
+        "description": "Silence-based turn detection"
+      }
+    ]
+  }
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| capabilities | object | Object containing all capability categories |
+| capabilities.asr | array | Available ASR provider/model combinations |
+| capabilities.llm | array | Available LLM provider/model combinations |
+| capabilities.tts | array | Available TTS providers |
+| capabilities.turn | array | Available turn-taking modes |
+
+### ASR Capabilities
+
+Each ASR capability object contains:
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| provider | string | ASR provider name (e.g., "deepgram") |
+| model | string | Model identifier (e.g., "nova-2") |
+| description | string | Human-readable description of the capability |
+
+### LLM Capabilities
+
+Each LLM capability object contains:
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| provider | string | LLM provider name (e.g., "openai", "anthropic") |
+| model | string | Model identifier (e.g., "gpt-4o", "claude-3-5-sonnet-20241022") |
+| description | string | Human-readable description of the capability |
+
+### TTS Capabilities
+
+Each TTS capability object contains:
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| provider | string | TTS provider name (e.g., "resemble") |
+| description | string | Human-readable description of the capability |
+
+### Turn Capabilities
+
+Each Turn capability object contains:
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| mode | string | Turn detection mode (e.g., "silence") |
+| description | string | Human-readable description of the capability |
+
+## Usage
+
+Use this endpoint to:
+
+1. **Validate configurations** before creating or updating agents
+2. **Discover new models** as they become available
+3. **Build dynamic UIs** that show available options
+4. **Ensure compatibility** between ASR, LLM, and TTS selections
+
+## Example Usage
+
+```bash
+# Get all capabilities
+curl --request GET "https://app.resemble.ai/api/v2/agents/capabilities" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+
+# Use the response to validate your agent configuration
+# before calling the create endpoint
+```

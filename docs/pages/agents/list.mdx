@@ -1,0 +1,131 @@
+---
+title: List Agents
+slug: /agents/list
+---
+
+Retrieve all agents for the authenticated team.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents
+```
+
+## Query Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| phone_number | string | Filter agents by associated phone number (optional) |
+| advanced | boolean | Include detailed agent configuration (default: false) |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Example Request with Query Parameters
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents?advanced=true&phone_number=%2B14155551234" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "agent": {
+        "name": "Customer Support Agent",
+        "uuid": "550e8400-e29b-41d4-a716-446655440000",
+        "languages": ["en-US"],
+        "dynamic_variables": {
+          "customer_name": "John Doe",
+          "account_id": "12345"
+        },
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-20T14:45:00Z",
+        "last_active_at": "2025-01-27T09:00:00Z",
+        "calls_today": 15,
+        "status": "active"
+      },
+      "asr": {
+        "provider": "deepgram",
+        "model": "nova-2",
+        "user_input_audio_format": "pcm_16000",
+        "keywords": ["resemble", "account", "billing"]
+      },
+      "tts": {
+        "voice_uuid": "abc123",
+        "voice_name": "Professional Voice"
+      },
+      "turn": {
+        "turn_timeout": 7,
+        "silence_end_call_timeout": -1,
+        "mode": "silence"
+      },
+      "llm": {
+        "prompt": "You are a helpful customer support agent.",
+        "provider": "openai",
+        "model": "gpt-4o",
+        "reasoning_effort": null,
+        "temperature": 0.3,
+        "timezone": "America/New_York",
+        "built_in_tools": {}
+      },
+      "phone_numbers": [
+        {
+          "id": 1,
+          "phone_number": "+14155551234",
+          "label": "Support Line",
+          "supports_inbound": true,
+          "supports_outbound": false,
+          "provider": "twilio",
+          "outbound_trunk": {},
+          "inbound_trunk": {},
+          "created_at": "2025-01-15T10:30:00Z",
+          "updated_at": "2025-01-15T10:30:00Z"
+        }
+      ],
+      "tools_count": 3,
+      "webhooks_count": 2
+    }
+  ],
+  "count": 1
+}
+```
+
+## Response Body (Basic Mode - advanced=false)
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of agent objects |
+| count | integer | Total number of agents |
+| agent.name | string | Name of the agent |
+| agent.uuid | string | Unique identifier for the agent |
+| agent.languages | array | Supported language codes (currently only "en-US") |
+| agent.dynamic_variables | object | Key-value pairs for runtime variable substitution |
+| agent.created_at | string | ISO8601 timestamp of creation |
+| agent.updated_at | string | ISO8601 timestamp of last update |
+| agent.last_active_at | string | ISO8601 timestamp of last activity (null if never active) |
+| agent.calls_today | integer | Number of calls today |
+| agent.status | string | Agent status: "active" or "inactive" |
+| tools_count | integer | Number of tools configured |
+| webhooks_count | integer | Number of webhooks configured |
+
+## Response Body (Advanced Mode - advanced=true)
+
+In advanced mode, `tools_count` and `webhooks_count` are replaced with:
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| tools | array | Full array of tool objects with configurations |
+| knowledge_bases | array | Array of knowledge base configurations |
+| webhooks | array | Full array of webhook objects with configurations |

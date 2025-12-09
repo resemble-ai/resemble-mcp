@@ -1,0 +1,109 @@
+---
+title: List Tools
+slug: /agents/tools/list
+---
+
+Retrieve all tools configured for an agent.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/{agent_uuid}/tools
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/tools" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": 1,
+      "name": "check_weather",
+      "description": "Check weather for a given location",
+      "tool_type": "webhook",
+      "tool_config": {
+        "api_schema": {
+          "url": "https://api.weather.com/check",
+          "method": "GET",
+          "request_headers": {
+            "Authorization": "Bearer {{api_key}}"
+          }
+        },
+        "parameters": {
+          "location": {
+            "type": "string",
+            "description": "City name"
+          }
+        },
+        "assignments": [
+          {
+            "source": "response",
+            "attribute_name": "temperature",
+            "dynamic_variable": "current_temp"
+          }
+        ],
+        "response_timeout_secs": 30
+      },
+      "access_info": {},
+      "usage_stats": {},
+      "active": true,
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "end_call",
+      "description": "Use this tool to end the current phone call immediately.",
+      "tool_type": "system",
+      "tool_config": {
+        "parameters": {},
+        "assignments": [],
+        "disable_interruptions": false,
+        "force_pre_tool_speech": false
+      },
+      "access_info": {
+        "owner": "Resemble.ai",
+        "created_by": "Resemble.ai"
+      },
+      "usage_stats": {},
+      "active": true,
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    }
+  ],
+  "count": 2
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of tool objects |
+| count | integer | Total number of tools |
+| id | integer | Tool ID |
+| name | string | Unique tool name (per agent) |
+| description | string | Tool description for LLM |
+| tool_type | string | Tool type: "webhook", "client", or "system" |
+| tool_config | object | Tool configuration (varies by type) |
+| access_info | object | Access metadata |
+| usage_stats | object | Usage statistics |
+| active | boolean | Whether tool is enabled |
+| created_at | string | ISO8601 timestamp |
+| updated_at | string | ISO8601 timestamp |

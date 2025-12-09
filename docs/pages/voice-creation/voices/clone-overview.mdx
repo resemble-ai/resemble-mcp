@@ -1,0 +1,146 @@
+---
+title: Clone a Voice Overview
+slug: /voice-creation/voices/clone-overview
+---
+
+Voice cloning creates an AI model of a person's voice from audio samples. Once trained, you can generate speech in that voice using any text input.
+
+## Choose Your Voice Type
+
+<Note>
+  The Voice Cloning API requires a Business plan or higher. [Upgrade your plan](https://app.resemble.ai/account/billing) to get started.
+</Note>
+
+### Rapid Clone
+
+Create natural-sounding AI voices with just 10 seconds of audio. The process is designed with simplicity in mind—provide a clear audio sample and our AI model delivers a fully-functional voice clone that's immediately ready to use.
+
+### Professional Clone
+
+Our professional-grade voice clones are nearly indistinguishable from the authentic source. Ideal for videos, audiobooks, podcasts, video games, and beyond.
+
+| | **Rapid Clone** | **Professional Clone** |
+|---|---|---|
+| **Audio needed** | 10 seconds – 3 minutes | 10 – 25+ minutes |
+| **Training time** | Under 1 minute | ~40 minutes |
+| **Voice quality** | Excellent | Excellent (nearly indistinguishable from source) |
+| **Emotional range** | Limited | Full range of emotions |
+| **Best for** | Quick iterations, demos, prototyping | Videos, audiobooks, podcasts, video games, production apps |
+
+## Two Ways to Clone a Voice
+
+Choose the method that fits your workflow:
+
+### Method 1: Clone with a Dataset File
+
+Best when you already have audio files ready to upload.
+
+**Step 1: Prepare your dataset**
+- Rapid: Single WAV file (≥10 seconds)
+- Professional: ZIP archive with multiple files (≥10 minutes total)
+- [View supported formats →](https://resemble.notion.site/Resemble-AI-Supported-Datasets-64e94dffc7fe4f518989df48d815879f)
+
+**Step 2: Create voice with dataset URL**
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "name": "Alex",
+    "voice_type": "professional",
+    "dataset_url": "https://example.com/audio-dataset.zip"
+  }'
+```
+
+**Step 3: Training starts**
+- Professional voices train automatically
+- Rapid voices require calling [Build Voice](/voice-creation/voices/build)
+
+---
+
+### Method 2: Upload Individual Recordings
+
+Best when you want to record and upload samples one-by-one.
+
+**Step 1: Create an empty voice**
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "name": "Alex",
+    "voice_type": "rapid"
+  }'
+```
+
+Save the `uuid` from the response - you'll need it for uploading recordings.
+
+**Step 2: Upload recordings to the voice**
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices/{voice_uuid}/recordings' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -F 'file=@audio.wav' \
+  -F 'name=sample_01' \
+  -F 'text=Transcript of the audio' \
+  -F 'emotion=neutral' \
+  -F 'is_active=true'
+```
+
+Repeat until you have:
+- Rapid: 3+ recordings (≈10 seconds total)
+- Professional: 20+ recordings (≥10 minutes)
+
+**Step 3: Start training**
+
+Call [Build Voice](/voice-creation/voices/build) to train the model:
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices/{voice_uuid}/build' \
+  -H 'Authorization: Bearer YOUR_API_KEY' \
+  -H 'Content-Type: application/json' \
+  --data '{}'
+```
+
+---
+
+## After Training Completes
+
+Once training finishes (status = `finished`), your voice is ready to use:
+- Generate audio via [Text-to-Speech](/voice-generation/text-to-speech/overview)
+- Use it in [Speech-to-Speech](/voice-generation/speech-to-speech)
+- Manage with [List Voices](/voice-creation/voices/list) and other endpoints
+
+## Monitoring Training Progress
+
+Set a `callback_uri` when creating your voice to receive a webhook notification when training completes:
+
+```json
+{
+  "ok": true,
+  "id": "voice-uuid",
+  "status": "finished"
+}
+```
+
+If there's a dataset issue, you'll receive details about problematic recordings including quality scores (STOI, PESQ, SI-SDR).
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Create Voice" icon="plus" href="/voice-creation/voices/create">
+    Create a new voice via API
+  </Card>
+  <Card title="Manage Recordings" icon="microphone" href="/voice-creation/recordings">
+    Upload and manage audio samples
+  </Card>
+  <Card title="Build Voice" icon="hammer" href="/voice-creation/voices/build">
+    Trigger voice training
+  </Card>
+  <Card title="Generate Speech" icon="volume" href="/guides/creating-clips/getting-started">
+    Start generating audio
+  </Card>
+</CardGroup>
+

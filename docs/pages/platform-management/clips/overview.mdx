@@ -1,0 +1,37 @@
+---
+title: Clips
+slug: /platform-management/clips
+---
+
+Clips are text-to-speech synthesis jobs within a project. They represent synthesized audio outputs produced by Resemble.
+
+## Clip Object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | string | Unique identifier for the clip. |
+| `title` | string | Clip title. |
+| `body` | string | Text that was synthesized. |
+| `voice_uuid` | string | UUID of voice used for synthesis. |
+| `voice_name` | string | Name of the voice used. |
+| `is_archived` | boolean | Whether the clip is archived. |
+| `audio_src` | string | URL to the synthesized audio file. |
+| `character_count` | integer | Number of characters in the text. |
+| `duration` | number | Duration of the audio in seconds. |
+| `last_generated_at` | datetime | Timestamp when audio was last generated. |
+| `timestamps` | object | Timestamp data for graphemes and phonemes. |
+| `created_at` | datetime | Timestamp when clip was created. |
+| `updated_at` | datetime | Timestamp when clip was last updated. |
+
+## Timestamps Object
+
+```json
+{
+  "graph_chars": ["H", "e", "l", "l", "o"],
+  "graph_times": [[0.0, 0.12], [0.12, 0.24], ...],
+  "phon_chars": [],
+  "phon_times": []
+}
+```
+
+**Note:** Phoneme timestamps (`phon_chars`, `phon_times`) return empty arrays for newer models and are only populated by legacy models.

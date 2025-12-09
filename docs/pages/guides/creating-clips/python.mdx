@@ -1,0 +1,86 @@
+---
+title: Python Clip Generator
+slug: /guides/creating-clips/python
+---
+
+Use the Resemble Python SDK to synthesize a clip from the command line.
+
+## 1. Create a virtual environment
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install resemble
+pip freeze > requirements.txt
+```
+
+## 2. Bootstrap `main.py`
+
+```python
+from resemble import Resemble
+import os
+import argparse
+
+
+def initialize_resemble_client():
+    api_key = os.environ.get("RESEMBLE_API_KEY")
+    if not api_key:
+        raise EnvironmentError("RESEMBLE_API_KEY is not set")
+    Resemble.api_key(api_key)
+
+
+def create_audio_clip(project_uuid, title, body, voice_uuid, is_archived=False):
+    print(f"Submitting request to create clip: {body}")
+    response = Resemble.v2.clips.create_sync(
+        project_uuid,
+        voice_uuid,
+        body,
+        is_archived=is_archived,
+        title=title,
+    )
+
+    if response["success"]:
+        clip = response["item"]
+        print(f"Created clip {clip['uuid']}")
+        print(clip["audio_src"])
+    else:
+        print("Clip creation failed")
+        print(response)
+
+
+def run_example(arguments):
+    initialize_resemble_client()
+    create_audio_clip(
+        project_uuid=arguments["project_uuid"],
+        title=arguments["title"],
+        body=arguments["body"],
+        voice_uuid=arguments["voice_uuid"],
+        is_archived=arguments.get("archived", False),
+    )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Create static audio content using Resemble"
+    )
+    parser.add_argument("--project_uuid", required=True)
+    parser.add_argument("--voice_uuid", required=True)
+    parser.add_argument("--title", required=True)
+    parser.add_argument("--body", required=True)
+    parser.add_argument("--archived", action="store_true")
+
+    args = parser.parse_args()
+    run_example(vars(args))
+```
+
+## 3. Run the script
+
+```bash
+RESEMBLE_API_KEY=... python3 main.py \
+  --project_uuid PROJECT_UUID \
+  --voice_uuid VOICE_UUID \
+  --title "Welcome" \
+  --body "Welcome to the product update"
+```
+
+The script prints the clip UUID and a signed URL you can download. Head to the [Projects dashboard](https://app.resemble.ai/projects) to review the clip in the UI.

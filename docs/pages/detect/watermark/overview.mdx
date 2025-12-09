@@ -1,0 +1,36 @@
+---
+title: Audio Watermarking
+slug: /detect/watermark
+---
+
+> **Beta:** Watermark API is currently in beta. Please [contact us](https://www.resemble.ai/schedule-a-demo/?utm_source=resemble_docs_watermark) if you would like to be added to the beta program.
+
+The Resemble Watermark API allows you to apply and detect watermarks on audio files. These endpoints provide functionality to apply and detect watermarks, and you can access the results of these operations through dedicated result endpoints.
+
+```ts
+interface ApplyRequest {
+  url: string;
+}
+
+interface ApplyResult {
+  success: boolean;
+  item: {
+    uuid: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+interface DetectRequest {
+  url: string;
+}
+
+interface DetectResult {
+  success: boolean;
+  item: {
+    uuid: string;
+    created_at: string;
+    updated_at: string;
+  };
+}
+```

@@ -1,0 +1,59 @@
+---
+title: Delete Agent
+slug: /agents/delete
+---
+
+Delete an agent and all its associated configurations.
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/agents/{uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The unique identifier of the agent |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "message": "Agent deleted successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Cannot delete agent"]
+  },
+  "message": "Failed to delete agent"
+}
+```
+
+## What Gets Deleted
+
+When you delete an agent, the following are removed:
+
+- Agent configuration (ASR, TTS, LLM, Turn settings)
+- Associated tools (webhook and client tools)
+- Associated webhooks (pre-call and post-call)
+- Dynamic variables
+- Phone number associations (phone numbers themselves are not deleted)
+
+> **Note**: System tools are not deleted as they are platform-managed resources.

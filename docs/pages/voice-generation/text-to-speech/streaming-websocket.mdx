@@ -1,0 +1,118 @@
+---
+title: Streaming (WebSocket)
+slug: /voice-generation/text-to-speech/streaming-websocket
+---
+
+Maintain a persistent WebSocket to stream audio frames with the lowest possible latency. This API is available to Business plans and above.
+
+## WebSocket URL
+
+```
+wss://websocket.cluster.resemble.ai/stream
+```
+
+The server enforces global and per-key concurrency limits. Defaults allow up to 20 simultaneous sessions across the cluster and 20 parallel connections per API key. If you hit capacity errors, back off and retry.
+
+## Request Flow
+
+1. Open a WebSocket connection to the endpoint above.
+2. Send a JSON payload describing the synthesis request.
+3. Consume a stream of audio frames and metadata.
+4. Listen for a terminal `audio_end` message before closing the socket.
+
+### Request Payload
+
+```json
+{
+  "voice_uuid": "<voice_uuid>",
+  "project_uuid": "<project_uuid>",
+  "data": "<text or SSML>",
+  "binary_response": false,
+  "request_id": 0,
+  "output_format": "wav",
+  "sample_rate": 32000,
+  "precision": "PCM_32",
+  "no_audio_header": false
+}
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `voice_uuid` | string | ✅ | Voice to synthesize. |
+| `project_uuid` | string | ✅ | Project to attach the clip to. |
+| `data` | string | ✅ | Text or SSML (≤ 3,000 characters excluding tags). |
+| `request_id` | number | ❌ | Optional integer echoed back on responses. Auto-increments per message if omitted. |
+| `binary_response` | boolean | ❌ | When `true`, responses are raw audio bytes (WAV or MP3). Defaults to JSON frames with base64 audio. |
+| `output_format` | string | ❌ | `wav` (default) or `mp3`. |
+| `sample_rate` | number | ❌ | `8000`, `16000`, `22050`, `32000`, or `44100`. |
+| `precision` | string | ❌ | PCM bit depth (`PCM_32`, `PCM_24`, `PCM_16`, `MULAW`). |
+| `no_audio_header` | boolean | ❌ | When `true`, omits WAV headers from binary responses. |
+
+## Response Shapes
+
+### JSON Frames (`binary_response = false`)
+
+```json
+{
+  "type": "audio",
+  "audio_content": "<base64>",
+  "audio_timestamps": {
+    "graph_chars": ["H", "e"],
+    "graph_times": [[0.0374, 0.1247], [0.0873, 0.1746]],
+    "phon_chars": ["h", "ˈe"],
+    "phon_times": [[0.0374, 0.1247], [0.0873, 0.1746]]
+  },
+  "sample_rate": 32000,
+  "request_id": 0
+}
+```
+
+Audio chunks arrive sequentially until an `audio_end` message is emitted.
+
+### Binary Frames (`binary_response = true`)
+
+Frames contain contiguous bytes of the requested format. If `no_audio_header` is `false`, the first frame includes a standard WAV header with Resemble's timestamp metadata.
+
+### Termination Message
+
+```json
+{
+  "type": "audio_end",
+  "request_id": 0
+}
+```
+
+## Error Handling
+
+> **Note:** The WebSocket API is limited to Business plan customers. Upgrade on the [billing page](https://app.resemble.ai/account/billing) if you receive `Unauthorized` responses.
+
+### Unrecoverable Errors
+
+Connection-level failures close the socket immediately.
+
+```json
+{
+  "type": "error",
+  "success": false,
+  "error_name": "ConnectionFailure",
+  "message": "Failed to establish a connection.",
+  "status_code": 401
+}
+```
+
+### Recoverable Errors
+
+The connection remains open, allowing you to fix the issue and retry.
+
+```json
+{
+  "type": "error",
+  "success": false,
+  "error_name": "BadJSON",
+  "error_params": {"explanation": "Provide your query in the 'data' field"},
+  "message": "Invalid JSON",
+  "status_code": 400
+}
+```
+
+Log the `error_name` and `request_id` so that you can correlate failures with client requests.

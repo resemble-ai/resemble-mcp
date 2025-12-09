@@ -1,0 +1,24 @@
+---
+title: Error Handling
+slug: /getting-started/errors
+---
+
+All REST endpoints return JSON along with an HTTP status code.
+
+```json
+{
+  "success": true,
+  "...": "other response fields"
+}
+```
+
+When a request fails, the response includes a descriptive message:
+
+```json
+{
+  "success": false,
+  "message": "Why the request failed"
+}
+```
+
+Log errors with the associated request ID whenever possible so that the Resemble team can help debug issues quickly.

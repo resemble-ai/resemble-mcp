@@ -1,0 +1,149 @@
+---
+title: Python Workflow
+slug: /guides/custom-voice-recordings/python
+---
+
+Upload a folder of recordings and transcripts, then build a production-ready voice.
+
+## Prerequisites
+
+- Python 3.8+
+- PRO plan (or higher) account and API token
+- Folder containing paired `.wav` and `.txt` files (`clip-01.wav` + `clip-01.txt`, etc.)
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install resemble
+```
+
+## 1. Script scaffold
+
+```python
+# resemble-clone-voice-recording/main.py
+import argparse
+import os
+from resemble import Resemble
+
+
+def initialize() -> None:
+    api_key = os.environ.get("RESEMBLE_API_KEY")
+    if not api_key:
+        raise EnvironmentError("Set RESEMBLE_API_KEY before running.")
+    Resemble.api_key(api_key)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Create a voice from local recordings"
+    )
+    parser.add_argument("--name", required=True)
+    parser.add_argument("--recordings", required=True)
+    return parser.parse_args()
+```
+
+## 2. Create the voice
+
+```python
+def create_voice(name: str) -> str:
+    print(f"Creating voice {name}...")
+    response = Resemble.v2.voices.create(name=name)
+    if not response["success"]:
+        raise RuntimeError(response)
+
+    voice = response["item"]
+    print(f"Voice UUID: {voice['uuid']} (status: {voice['status']})")
+    return voice["uuid"]
+```
+
+## 3. Prepare recordings
+
+```python
+import os
+
+def read_folder(folder_path: str):
+    entries = []
+    for filename in os.listdir(folder_path):
+        if not filename.endswith(".wav"):
+            continue
+
+        transcript = filename.replace(".wav", ".txt")
+        transcript_path = os.path.join(folder_path, transcript)
+        if not os.path.exists(transcript_path):
+            print(f"Skipping {filename}; missing transcript.")
+            continue
+
+        with open(transcript_path, "r", encoding="utf-8") as handle:
+            text = handle.read()
+
+        entries.append(
+            {
+                "file_path": os.path.join(folder_path, filename),
+                "name": transcript,
+                "text": text,
+            }
+        )
+    return entries
+```
+
+Aim for at least 20 clean samples (1–12 seconds, no silence). Longer files are ignored during training.
+
+## 4. Upload recordings
+
+```python
+def upload_recordings(voice_uuid: str, folder_path: str) -> None:
+    recordings = read_folder(folder_path)
+    successes = 0
+
+    for recording in recordings:
+        print(f"Uploading {recording['name']}...")
+        with open(recording["file_path"], "rb") as audio_file:
+            response = Resemble.v2.recordings.create(
+                voice_uuid,
+                audio_file,
+                recording["name"],
+                recording["text"],
+                is_active=True,
+                emotion="neutral",
+            )
+
+        if response["success"]:
+            successes += 1
+        else:
+            print(f"Failed to upload {recording['name']}")
+            print(response)
+
+    print(f"Uploaded {successes}/{len(recordings)} recordings")
+```
+
+## 5. Trigger the build
+
+```python
+def trigger_voice_build(voice_uuid: str) -> None:
+    response = Resemble.v2.voices.build(uuid=voice_uuid)
+    if not response["success"]:
+        raise RuntimeError(response)
+    print("Build request submitted. Monitor progress via the API or dashboard.")
+```
+
+## 6. Wire everything together
+
+```python
+def main():
+    args = parse_args()
+    initialize()
+
+    voice_uuid = create_voice(args.name)
+    upload_recordings(voice_uuid, args.recordings)
+    trigger_voice_build(voice_uuid)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+```bash
+RESEMBLE_API_KEY=... python main.py --name "Support Voice" --recordings ./example-data
+```
+
+The script prints upload progress and starts training. Use [List Voices](/voice-creation/voices/list) or the dashboard to monitor build status until the voice is ready.

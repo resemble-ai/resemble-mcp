@@ -1,0 +1,165 @@
+---
+title: Agent Webhooks
+slug: /agents/webhooks/overview
+---
+
+Webhooks enable agents to call external APIs at specific points in the conversation lifecycle. There are two webhook types: pre-call (executed before call starts) and post-call (executed after call ends).
+
+## Webhook Types
+
+### Pre-Call Webhooks
+
+Execute before a conversation starts to populate dynamic variables with context.
+
+**Use Cases**:
+- Fetch customer information from CRM
+- Load account details
+- Retrieve conversation history
+- Get user preferences
+- Initialize session data
+
+**Features**:
+- Populate agent dynamic variables from response
+- Block call start until webhook completes
+- Configurable timeout
+- Variable assignments from response data
+
+**Example Flow**:
+1. Incoming call arrives
+2. Pre-call webhook executes
+3. Response data populates dynamic variables
+4. Agent starts conversation with context
+
+### Post-Call Webhooks
+
+Execute after a conversation ends for logging and analytics.
+
+**Use Cases**:
+- Log conversation summary
+- Update CRM records
+- Send notifications
+- Track analytics
+- Trigger follow-up actions
+
+**Features**:
+- Fire-and-forget execution
+- No variable assignments (call already ended)
+- Configurable timeout
+- Access to conversation metadata
+
+**Example Flow**:
+1. Call ends
+2. Post-call webhook executes
+3. Conversation data sent to external system
+4. Call cleanup completes
+
+## Webhook Configuration
+
+### API Schema
+
+Define the HTTP endpoint to call:
+
+```json
+{
+  "api_schema": {
+    "url": "https://api.example.com/webhook",
+    "method": "POST",
+    "request_headers": {
+      "Authorization": "Bearer secret123",
+      "Content-Type": "application/json"
+    },
+    "request_body": {
+      "agent_uuid": "{{agent_uuid}}",
+      "caller": "{{caller_phone}}"
+    }
+  }
+}
+```
+
+### Assignments (Pre-Call Only)
+
+Extract data from webhook response:
+
+```json
+{
+  "assignments": [
+    {
+      "source": "response",
+      "attribute_name": "customer_name",
+      "dynamic_variable": "customer_name"
+    },
+    {
+      "source": "response",
+      "attribute_name": "account_balance",
+      "dynamic_variable": "balance"
+    }
+  ]
+}
+```
+
+### Template Variables
+
+Use `{{variable_name}}` in URLs, headers, and bodies:
+
+**Built-in Variables**:
+- `{{agent_uuid}}`: Agent's UUID
+- `{{conversation_uuid}}`: Conversation UUID
+- `{{caller_phone}}`: Caller's phone number (inbound)
+- `{{call_duration}}`: Call duration in seconds (post-call)
+- `{{call_summary}}`: AI-generated call summary (post-call)
+
+**Agent Dynamic Variables**:
+- Any variable defined in agent's `dynamic_variables`
+
+## Webhook Limits
+
+- **One webhook per type**: Each agent can have at most one pre-call and one post-call webhook
+- **Timeout**: Configurable response timeout (default varies by type)
+- **No chaining**: Webhooks cannot trigger other webhooks
+- **Single execution**: Each webhook executes once per call
+
+## Available Operations
+
+- [List Webhooks](/agents/webhooks/list) - Retrieve all webhooks for an agent
+- [Get Webhook](/agents/webhooks/get) - Get a specific webhook
+- [Create Webhook](/agents/webhooks/create) - Add a new webhook
+- [Update Webhook](/agents/webhooks/update) - Modify webhook configuration
+- [Delete Webhook](/agents/webhooks/delete) - Remove a webhook
+
+## Common Workflows
+
+### Setting Up Pre-Call Customer Lookup
+
+1. Create pre-call webhook pointing to CRM API
+2. Configure request to include caller phone number
+3. Set up assignments to extract customer data
+4. Agent uses populated variables in conversation
+
+### Setting Up Post-Call Logging
+
+1. Create post-call webhook pointing to analytics service
+2. Configure request to include conversation metadata
+3. No assignments needed (call already ended)
+4. External system receives conversation data
+
+## Error Handling
+
+### Pre-Call Webhook Failures
+
+If a pre-call webhook fails:
+- Call may be blocked (depending on configuration)
+- Agent may start with empty dynamic variables
+- Error logged for debugging
+
+### Post-Call Webhook Failures
+
+If a post-call webhook fails:
+- Error logged but call completes normally
+- No retry attempts (fire-and-forget)
+- External system may miss data
+
+## See Also
+
+- [Create Agent](/agents/create) - Configure webhooks during agent creation
+- [Update Agent](/agents/update) - Modify webhook settings
+- [Agent Tools Overview](/agents/tools/overview) - Learn about tool webhooks

@@ -1,0 +1,51 @@
+---
+title: Search Identities
+slug: /detect/identity/search
+---
+
+`POST https://app.resemble.ai/api/v2/identity/search`
+
+Search for matching voice identities based on an audio sample.
+
+## Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `url` | string | ✅ | URL to audio sample to search for. |
+| `top_k` | integer | ❌ | Number of top matches to return (1-20). Default: 5. |
+
+## Example Request
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/identity/search' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/audio/sample_to_search.wav",
+    "top_k": 5
+  }'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": [
+    {
+      "uuid": "IDENTITY_UUID",
+      "name": "John Doe",
+      "confidence": 0.95,
+      "distance": 0.12
+    },
+    {
+      "uuid": "IDENTITY_UUID_2",
+      "name": "Jane Smith",
+      "confidence": 0.87,
+      "distance": 0.24
+    }
+  ]
+}
+```
+
+**Note:** Returns the top K most similar speakers, sorted by similarity.

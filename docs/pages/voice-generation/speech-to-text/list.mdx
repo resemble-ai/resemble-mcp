@@ -1,0 +1,94 @@
+---
+title: List Transcripts
+slug: /voice-generation/speech-to-text/list
+---
+
+Retrieve paginated transcript jobs for the authenticated team.
+
+## Endpoint
+
+`GET https://app.resemble.ai/api/v2/speech-to-text`
+
+## Query Parameters
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `page` | integer | ❌ | Page number. Default: 1. |
+| `per_page` | integer | ❌ | Items per page (1-50). Default: 25. |
+
+## Response
+
+```json
+{
+  "success": true,
+  "meta": {
+    "page": 1,
+    "per_page": 25,
+    "total_pages": 4,
+    "total_items": 87
+  },
+  "items": [
+    {
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "text": "Full transcript text...",
+      "words": [
+        {
+          "word": "Hello",
+          "start": 0.0,
+          "end": 0.5,
+          "confidence": 0.99
+        }
+      ],
+      "query": "Summarize the main points",
+      "answer": "The main points are...",
+      "status": "completed",
+      "file_url": "https://...",
+      "duration_seconds": 120.5,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:32:00Z"
+    }
+  ]
+}
+```
+
+**Note:** Status can be `pending`, `processing`, `completed`, or `failed`.
+
+## Examples
+
+```bash
+curl --request GET 'https://app.resemble.ai/api/v2/speech-to-text?page=1&per_page=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+Filter completed jobs client-side with `jq`:
+
+```bash
+curl -s -H "Authorization: Bearer YOUR_API_TOKEN" \
+  "https://app.resemble.ai/api/v2/speech-to-text?per_page=50" \
+  | jq '.items[] | select(.status == "completed")'
+```
+
+Iterate through every page:
+
+```bash
+page=1
+while true; do
+  response=$(curl -s -H "Authorization: Bearer YOUR_API_TOKEN" \
+    "https://app.resemble.ai/api/v2/speech-to-text?page=$page&per_page=50")
+
+  echo "$response" | jq '.items[]'
+
+  current=$(echo "$response" | jq '.meta.page')
+  total=$(echo "$response" | jq '.meta.total_pages')
+  [ "$current" -ge "$total" ] && break
+  page=$((page + 1))
+done
+```
+
+## Best Practices
+
+- Request only the fields you need and cache results locally when possible.
+- Poll at reasonable intervals to track status transitions without throttling the service.
+- Validate pagination parameters before sending requests.
+
+Errors follow the standard `{ "success": false, "error": "..." }` structure with appropriate HTTP status codes (`400`, `401`, `403`, `500`).

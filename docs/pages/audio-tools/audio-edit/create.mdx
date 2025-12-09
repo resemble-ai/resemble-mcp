@@ -1,0 +1,47 @@
+---
+title: Create Audio Edit
+slug: /audio-tools/audio-edit/create
+---
+
+`POST https://app.resemble.ai/api/v2/edit`
+
+Create a new audio edit job to modify spoken content.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `original_transcript` | string | ✅ | Original text from the audio. |
+| `target_transcript` | string | ✅ | Desired modified text. |
+| `voice_uuid` | string | ✅ | Voice to use for synthesis. |
+| `input_audio` | string | ✅ | Input audio data or URL. |
+| `callback_uri` | string | ❌ | Callback URL for completion notification. |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/edit' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "original_transcript": "Hello world",
+    "target_transcript": "Hi there",
+    "voice_uuid": "VOICE_UUID",
+    "input_audio": "https://..."
+  }'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "EDIT_UUID",
+    "voice_uuid": "VOICE_UUID",
+    "original_transcript": "Hello world",
+    "target_transcript": "Hi there",
+    "input_audio_url": "https://...",
+    "result_audio_url": null,
+    "error": null
+  }
+}
+```
+
+<Note>
+Voice must be a non-marketplace voice owned by the user. Processing is asynchronous. Result will be available via GET endpoint when complete.
+</Note>

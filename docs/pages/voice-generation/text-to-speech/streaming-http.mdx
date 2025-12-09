@@ -1,0 +1,94 @@
+---
+title: Streaming (HTTP)
+slug: /voice-generation/text-to-speech/streaming-http
+---
+
+Use the streaming endpoint to start playback as audio is generated. Responses are chunked WAV data so you can progressively feed a player while long-form synthesis completes.
+
+See the [streaming demo project](https://github.com/resemble-ai/resemble-streaming-demo) for a full reference implementation.
+
+> **Careful:** Streaming requests target dedicated synthesis hosts (see your streaming endpoint in the dashboard). Do not send them to `app.resemble.ai`.
+
+## Endpoint
+
+```
+POST https://f.cluster.resemble.ai/stream
+```
+
+### Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `voice_uuid` | string | Yes | Voice to synthesize. |
+| `data` | string | Yes | Text or SSML to synthesize (≤ 2,000 characters; partial SSML support). |
+| `project_uuid` | string | No | Project that will own the generated clip. |
+| `precision` | string | No | One of `PCM_32`, `PCM_24`, `PCM_16`, or `MULAW`. Defaults to `PCM_32`. |
+| `sample_rate` | number | No | One of `8000`, `16000`, `22050`, `32000`, `44100`, or `48000`. Defaults to `48000`. |
+| `use_hd` | boolean | No | Enables higher-definition synthesis with a small latency trade-off. Defaults to `false`. |
+
+### Response
+
+The response is a single-channel PCM WAV stream. The first bytes include metadata describing duration and timestamps before audio frames arrive.
+
+## Working with the Stream
+
+1. Read the first chunk to obtain metadata such as duration, grapheme timestamps, and phoneme timestamps.
+2. Continue reading chunks and feed them to your playback pipeline.
+3. Handle the `Content-Encoding` header if you requested compression.
+
+> **Try it** – Issue a streaming request and pipe the response to a file:
+>
+> ```bash
+> curl --output - "https://f.cluster.resemble.ai/stream" \
+>   -H "Authorization: Bearer YOUR_API_TOKEN" \
+>   -H "Content-Type: application/json" \
+>   --data '{
+>     "voice_uuid": "YOUR_VOICE_UUID",
+>     "data": "Streaming helps deliver synthesized audio before it is finished.",
+>     "precision": "PCM_16"
+>   }' \
+> | ffplay -
+> ```
+
+## WAV Metadata Layout
+
+Resemble annotates WAV headers to expose timing data without additional requests.
+
+- File-level metadata in the `RIFF` and `fmt` chunks
+- Grapheme and phoneme cue points in `cue`, `list`, and `ltxt` chunks
+- PCM audio bytes in the `data` chunk
+
+### Header & Format Chunks
+
+| Size | Description | Value |
+| --- | --- | --- |
+| 4 | RIFF ID | `"RIFF"` |
+| 4 | Remaining file size | `(file size) - 8` |
+| 4 | RIFF type | `"WAVE"` |
+| 4 | Format chunk ID | `"fmt "` |
+| 4 | Chunk data size | `16` |
+| 2 | Compression code | `1` (PCM) |
+| 2 | Number of channels | `1` |
+| 4 | Sample rate | `8000`–`48000` |
+| 4 | Byte rate | `16000`–`96000` |
+| 2 | Block align | `2` |
+| 2 | Bits per sample | `16` |
+
+> Older models may report the file size as `0xFFFFFFFF`. Contact support to upgrade if you see this value.
+
+### Cue, List, and LTXT Chunks
+
+- `cue ` chunk lists offsets for grapheme and phoneme boundaries.
+- `list` chunk (type `adtl`) groups label data.
+- Each `ltxt` chunk pairs a cue ID with either a grapheme (`"grph"`) or phoneme (`"phon"`) label and duration (in samples).
+
+When reading `ltxt` chunks, align to 2-byte boundaries. If `text_length` is odd, skip an additional byte before the next chunk.
+
+### Data Chunk
+
+| Size | Description | Value |
+| --- | --- | --- |
+| 4 | Data chunk ID | `"data"` |
+| 4 | Remaining bytes | `wav_length * 2` |
+
+After the header metadata, the stream consists of PCM16 samples that you can decode on the fly.

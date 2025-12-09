@@ -1,0 +1,67 @@
+---
+title: Python Workflow
+slug: /guides/custom-voice-dataset/python
+---
+
+## Prerequisites
+
+- Resemble PRO plan or above
+- API key (`RESEMBLE_API_KEY` environment variable)
+
+## 1. Project setup
+
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip install resemble
+pip freeze > requirements.txt
+```
+
+## 2. Implement `main.py`
+
+```python
+import os
+from resemble import Resemble
+
+
+def initialize_resemble_client():
+    api_key = os.environ.get("RESEMBLE_API_KEY")
+    if not api_key:
+        raise EnvironmentError("RESEMBLE_API_KEY is not set")
+    Resemble.api_key(api_key)
+
+
+def create_voice():
+    voice_name = "My Voice Clone"
+    dataset = "https://example.com/dataset.zip"  # Replace with your dataset URL
+
+    print(f"Submitting request to create voice: {voice_name}")
+    response = Resemble.v2.voices.create(voice_name, dataset_url=dataset)
+
+    if response["success"]:
+        voice = response["item"]
+        print(
+            f"Created {voice_name} (UUID {voice['uuid']}). Status: {voice['status']}"
+        )
+    else:
+        print("Voice creation failed", response)
+
+
+def run_main():
+    initialize_resemble_client()
+    create_voice()
+
+
+if __name__ == "__main__":
+    run_main()
+```
+
+Verify the dataset URL is accessible and matches a [supported format](https://www.notion.so/Resemble-AI-Supported-Datasets-64e94dffc7fe4f518989df48d815879f).
+
+## 3. Run the script
+
+```bash
+RESEMBLE_API_KEY=... python3 main.py
+```
+
+The response includes the new voice UUID and current build status (e.g., `initializing`). Track its progress via the API or the [Voices dashboard](https://app.resemble.ai/voices).

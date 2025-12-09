@@ -1,0 +1,25 @@
+---
+title: Audio Edit
+slug: /audio-tools/audio-edit
+---
+
+Audio Edit performs targeted audio inpainting—modify portions of an existing recording without rerecording the entire clip.
+
+## Workflow
+
+1. **Create an edit** with the source audio, transcripts, and target voice.
+2. **Poll for completion** using the returned UUID.
+3. **Download the result audio** from `result_audio_url` once available.
+
+## Resource Schema
+
+```ts
+interface AudioEdit {
+  uuid: string;
+  voice_uuid: string;
+  original_transcript: string;
+  target_transcript: string;
+  input_audio_url: string;
+  result_audio_url: string | null;
+}
+```

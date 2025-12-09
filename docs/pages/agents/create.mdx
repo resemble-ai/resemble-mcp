@@ -1,0 +1,256 @@
+---
+title: Create Agent
+slug: /agents/create
+---
+
+Create a new voice agent with ASR, TTS, LLM, and turn-taking configurations.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/agents
+```
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| name | string | Yes | Name of the agent |
+| voice_uuid | string | Yes | UUID of the voice to use for TTS |
+| phone_number_id | integer | No | ID of phone number to link to this agent |
+| languages | array | No | Supported languages (default: ["en-US"]) |
+| dynamic_variables | object | No | Key-value pairs for runtime variable substitution |
+| asr | object | No | ASR configuration |
+| turn | object | No | Turn-taking configuration |
+| llm | object | No | LLM configuration |
+| webhooks | array | No | Array of webhook configurations |
+| system_tools | object | No | System tool configurations |
+
+### ASR Configuration
+
+| Attribute | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| model | string | Yes | - | ASR model to use |
+| provider | string | No | "deepgram" | ASR provider |
+| user_input_audio_format | string | No | "pcm_16000" | Audio format: pcm_8000, pcm_16000, pcm_22050, pcm_24000, pcm_44100, pcm_48000, ulaw_8000 |
+| keywords | array | No | [] | Keywords for improved recognition |
+
+### Turn Configuration
+
+| Attribute | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| turn_timeout | integer | No | 7 | Seconds before turn ends (≥ 0) |
+| silence_end_call_timeout | integer | No | -1 | Seconds of silence before ending call (-1 = disabled, ≥ 0 = enabled) |
+| mode | string | No | "silence" | Turn detection mode (currently only "silence" supported) |
+
+### LLM Configuration
+
+| Attribute | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| prompt | string | No | null | System prompt for the LLM |
+| provider | string | No | null | LLM provider (e.g., "openai", "anthropic") |
+| model | string | No | null | LLM model (e.g., "gpt-4o", "claude-3-5-sonnet-20241022") |
+| reasoning_effort | string | No | null | Reasoning effort level (model-specific) |
+| temperature | float | No | 0.3 | Temperature for response generation |
+| timezone | string | No | null | Timezone for date/time operations |
+| built_in_tools | object | No | {} | Built-in tool configurations |
+
+### Webhooks Configuration
+
+Each webhook object requires:
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| webhook_type | string | Yes | Type: "pre_call" or "post_call" |
+| webhook_config | object | Yes | Webhook configuration (see webhook section) |
+
+### System Tools Configuration
+
+System tools are automatically created for each agent. You can configure them:
+
+| Tool Name | Description |
+| --- | --- |
+| end_call | Ends the current call |
+| transfer_to_number | Transfers call to another number |
+| voicemail_detection | Detects voicemail |
+
+Each system tool accepts:
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| active | boolean | true | Whether the tool is enabled |
+| disable_interruptions | boolean | false | Prevent user interruptions during tool use |
+| force_pre_tool_speech | boolean | false | Force agent to speak before using tool |
+
+## Example Request
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "name": "Customer Support Agent",
+    "voice_uuid": "abc123",
+    "phone_number_id": 1,
+    "languages": ["en-US"],
+    "dynamic_variables": {
+      "customer_name": "{{customer_name}}",
+      "account_id": "{{account_id}}"
+    },
+    "asr": {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": ["resemble", "account"]
+    },
+    "turn": {
+      "turn_timeout": 7,
+      "silence_end_call_timeout": -1,
+      "mode": "silence"
+    },
+    "llm": {
+      "prompt": "You are a helpful customer support agent.",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "temperature": 0.3,
+      "timezone": "America/New_York"
+    },
+    "webhooks": [
+      {
+        "webhook_type": "pre_call",
+        "webhook_config": {
+          "api_schema": {
+            "url": "https://example.com/pre-call",
+            "method": "POST"
+          },
+          "assignments": []
+        }
+      }
+    ],
+    "system_tools": {
+      "end_call": {
+        "active": true,
+        "disable_interruptions": false,
+        "force_pre_tool_speech": false
+      }
+    }
+  }'
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "agent": {
+      "name": "Customer Support Agent",
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "languages": ["en-US"],
+      "dynamic_variables": {
+        "customer_name": "{{customer_name}}",
+        "account_id": "{{account_id}}"
+      },
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z",
+      "last_active_at": null,
+      "calls_today": 0,
+      "status": "inactive"
+    },
+    "asr": {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": ["resemble", "account"]
+    },
+    "tts": {
+      "voice_uuid": "abc123",
+      "voice_name": "Professional Voice"
+    },
+    "turn": {
+      "turn_timeout": 7,
+      "silence_end_call_timeout": -1,
+      "mode": "silence"
+    },
+    "llm": {
+      "prompt": "You are a helpful customer support agent.",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "reasoning_effort": null,
+      "temperature": 0.3,
+      "timezone": "America/New_York",
+      "built_in_tools": {}
+    },
+    "phone_numbers": [
+      {
+        "id": 1,
+        "phone_number": "+14155551234",
+        "label": "Support Line",
+        "supports_inbound": true,
+        "supports_outbound": false,
+        "provider": "twilio",
+        "outbound_trunk": {},
+        "inbound_trunk": {},
+        "created_at": "2025-01-15T10:30:00Z",
+        "updated_at": "2025-01-15T10:30:00Z"
+      }
+    ],
+    "tools_count": 3,
+    "webhooks_count": 1
+  },
+  "message": "Agent created successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "name": ["can't be blank"],
+    "voice_uuid": ["Voice not found or not accessible"],
+    "phone_number_id": ["Phone number is already linked to agent 'Other Agent'"],
+    "dynamic_variables": ["Dynamic variables must be a flat hash. Key 'nested' contains a nested object or array."],
+    "asr.model": ["ASR provider/model combination 'deepgram/invalid-model' is not supported"],
+    "turn.turn_timeout": ["must be greater than or equal to 0"],
+    "llm.temperature": ["is not a number"]
+  },
+  "message": "Failed to create agent"
+}
+```
+
+## Validation Rules
+
+### Agent Validations
+
+- **name**: Required, cannot be empty
+- **voice_uuid**: Required, must reference an existing voice in your team
+- **languages**: Must be one of: "en-US" (currently only language supported)
+- **phone_number_id**: If provided, must reference an existing phone number that is not already linked to another agent
+- **dynamic_variables**:
+  - Keys: Max 64 characters, cannot be reserved words (__proto__, constructor, prototype)
+  - Values: Max 2048 characters, must be scalar (string, number, boolean, or null)
+  - Must be a flat hash (no nested objects or arrays)
+
+### ASR Validations
+
+- **provider + model combination**: Must be a supported ASR capability (check [/agents/capabilities](/agents/capabilities) endpoint)
+- **user_input_audio_format**: Must be one of the supported formats
+- **keywords**: Array of strings
+
+### LLM Validations
+
+- **provider + model combination**: Must be a supported LLM capability (check [/agents/capabilities](/agents/capabilities) endpoint)
+- **temperature**: Must be a float value
+- **timezone**: Must be a valid timezone string or null
+
+### Turn Validations
+
+- **turn_timeout**: Must be ≥ 0
+- **silence_end_call_timeout**: Must be ≥ -1 (where -1 = disabled)
+- **mode**: Must be "silence"
+
+### Interoperability Validations
+
+The system validates that all components (ASR, LLM, Turn, TTS) are compatible with each other.

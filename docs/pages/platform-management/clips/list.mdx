@@ -1,0 +1,56 @@
+---
+title: List Clips
+slug: /platform-management/clips/list
+---
+
+`GET https://app.resemble.ai/api/v2/projects/{project_uuid}/clips`
+
+## Query Parameters
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `q` | string | ❌ | Search query to filter clips by title. |
+| `page` | integer | ❌ | Page number for pagination. |
+| `page_size` | integer | ❌ | Number of items per page. |
+
+## Example Request
+
+```bash
+curl 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID/clips?page=1&page_size=10&q=intro' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "total_results": 25,
+  "page_count": 3,
+  "items": [
+    {
+      "uuid": "CLIP_UUID",
+      "title": "Intro",
+      "body": "Welcome to our show",
+      "voice_uuid": "VOICE_UUID",
+      "voice_name": "Professional Voice",
+      "is_archived": false,
+      "audio_src": "https://...",
+      "character_count": 20,
+      "duration": 2.5,
+      "last_generated_at": "2024-01-15T10:32:00Z",
+      "timestamps": {
+        "graph_chars": ["W", "e", "l", "c", "o", "m", "e"],
+        "graph_times": [[0, 120], [120, 240], ...],
+        "phon_chars": [],
+        "phon_times": []
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:32:00Z"
+    }
+  ]
+}
+```
+
+> **Note:** Clips created via the UI return limited fields until the "Create All" button finalizes synthesis. UI-generated clips containing multiple voices return a comma-separated `voice_uuid` list (e.g., `"4fe4e18e,922705cb"`). API-created clips include full metadata immediately.

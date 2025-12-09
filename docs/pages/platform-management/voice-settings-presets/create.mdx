@@ -1,0 +1,55 @@
+---
+title: Create Voice Settings Preset
+slug: /platform-management/voice-settings-presets/create
+---
+
+`POST https://app.resemble.ai/api/v2/voice_settings_presets`
+
+Create a new voice settings preset.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | ✅ | Preset name. |
+| `pace` | number | ❌ | Speech pace/speed. |
+| `temperature` | number | ❌ | Voice temperature. |
+| `pitch` | number | ❌ | Voice pitch. |
+| `useHd` | boolean | ❌ | Use HD quality. |
+| `exaggeration` | number | ❌ | Exaggeration level. |
+| `description` | string | ❌ | Description or prompt. |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/voice_settings_presets' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "name": "Energetic Voice",
+    "pace": 1.2,
+    "temperature": 1.1,
+    "pitch": 0.5,
+    "useHd": false,
+    "exaggeration": 0.7,
+    "description": "Speak with high energy and enthusiasm"
+  }'
+```
+
+```json
+{
+  "success": true,
+  "data": {
+    "uuid": "123e4567-e89b-12d3-a456-426614174000",
+    "name": "My Custom Preset",
+    "settings": {
+      "pace": 1.2,
+      "temperature": 1.1,
+      "pitch": 0.5,
+      "useHd": false,
+      "exaggeration": 0.7,
+      "description": "Speak with high energy and enthusiasm"
+    },
+    "is_public": false,
+    "created_at": "2024-01-01T00:00:00Z",
+    "updated_at": "2024-01-01T00:00:00Z"
+  },
+  "message": "Preset created successfully"
+}
+```

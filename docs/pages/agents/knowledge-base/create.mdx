@@ -1,0 +1,180 @@
+---
+title: Create Knowledge Item
+slug: /agents/knowledge-base/create
+---
+
+Creates a new knowledge item and queues it for ingestion processing.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/knowledge_items
+```
+
+## Content-Type
+
+- `application/json` for URL and text types
+- `multipart/form-data` for document uploads
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| title | string | Yes | Title of the knowledge item (max 50 characters) |
+| description | string | Yes | Description (max 200 characters) |
+| source_type | string | Yes | One of: `document`, `url`, `text` |
+| url | string | Conditional | Required when source_type is `url`. Must be HTTP or HTTPS. |
+| raw_text | string | Conditional | Required when source_type is `text`. Max 10,000 characters. |
+| document | file | Conditional | Required when source_type is `document`. PDF only, max 25MB. |
+
+## Example Request (URL Type)
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "title": "Company FAQ",
+    "description": "Frequently asked questions from our website",
+    "source_type": "url",
+    "url": "https://example.com/faq"
+  }'
+```
+
+## Example Request (Text Type)
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "title": "Product Information",
+    "description": "Core product details",
+    "source_type": "text",
+    "raw_text": "Our company sells premium widgets. The Widget Pro costs $99 and includes advanced features like..."
+  }'
+```
+
+## Example Request (Document Type)
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -F "title=Product Manual" \
+  -F "description=Complete product documentation" \
+  -F "source_type=document" \
+  -F "document=@/path/to/document.pdf"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Product FAQ",
+    "description": "FAQ content",
+    "source_type": "url",
+    "status": "pending",
+    "error_message": null,
+    "chunk_count": null,
+    "url": "https://example.com/faq",
+    "agent_count": 0,
+    "created_at": "2025-12-01T10:00:00Z",
+    "updated_at": "2025-12-01T10:00:00Z"
+  },
+  "message": "Knowledge item created successfully. Ingestion has been queued."
+}
+```
+
+## Response (Error - Validation)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "title": [{ "error": "too_long", "message": "Title is too long (maximum is 50 characters)" }],
+    "url": [{ "error": "invalid_url", "message": "URL must be a valid HTTP or HTTPS URL" }],
+    "raw_text": [{ "error": "too_long", "message": "Text exceeds maximum length of 10,000 characters" }],
+    "document": [{ "error": "invalid_type", "message": "Only PDF files are supported" }]
+  },
+  "message": "Failed to create knowledge item"
+}
+```
+
+## Response (Error - Limit Reached)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": [{ "error": "limit_reached", "message": "Maximum of 3 knowledge items reached" }]
+  },
+  "message": "Failed to create knowledge item"
+}
+```
+
+## Validation Rules
+
+### General Validations
+
+- **title**: Required, max 50 characters
+- **description**: Required, max 200 characters
+- **source_type**: Required, must be one of: `document`, `url`, `text`
+
+### URL Type Validations
+
+- **url**: Required when source_type is `url`
+- Must be a valid HTTP or HTTPS URL
+- URL must be accessible for ingestion
+
+### Text Type Validations
+
+- **raw_text**: Required when source_type is `text`
+- Max 10,000 characters
+
+### Document Type Validations
+
+- **document**: Required when source_type is `document`
+- Must be a PDF file
+- Max file size: 25MB
+- File must be a valid, non-corrupted PDF
+
+### Team Limits
+
+- Maximum of 3 knowledge items per team
+- Cannot create new items when limit is reached
+
+## Processing Flow
+
+After successful creation:
+
+1. Knowledge item is created with `status: "pending"`
+2. Ingestion job is queued automatically
+3. Status transitions to `processing` when job starts
+4. Processing includes:
+   - **Extraction**: Extract text from PDF or fetch from URL
+   - **Chunking**: Split content into optimal-sized chunks
+   - **Embedding**: Generate vector embeddings
+   - **Indexing**: Store in search index
+5. Status transitions to `ready` on success or `failed` on error
+6. Poll [Get Knowledge Item](/agents/knowledge-base/get) to monitor progress
+
+## Error Codes
+
+| Error Code | Description |
+| --- | --- |
+| limit_reached | Team has reached maximum knowledge items (3) |
+| invalid_type | Unsupported document type (only PDF allowed) |
+| too_large | File exceeds 25MB limit |
+| too_long | Text exceeds 10,000 character limit |
+| invalid_url | URL format invalid or not HTTP/HTTPS |
+
+## Next Steps
+
+After creating a knowledge item:
+
+1. **Monitor Status**: Poll [Get Knowledge Item](/agents/knowledge-base/get) until status is `ready`
+2. **Attach to Agent**: Use [Attach Knowledge Item to Agent](/agents/knowledge-base/attach) to enable RAG for the agent
+3. **Configure RAG**: Update agent's `search_mode` and `max_chunks_per_query` via [Update Agent](/agents/update)

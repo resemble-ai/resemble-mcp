@@ -1,0 +1,26 @@
+---
+title: Account
+slug: /platform-management/account
+---
+
+Account endpoints expose user-level details and associated teams.
+
+```ts
+interface UserAccount {
+  email: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+  teams: number;
+}
+
+interface Team {
+  uuid: string;
+  name: string;
+  plan: string;
+  voice_limit: number;
+  units: string;
+  rate: number;
+  current_usage: number;
+}
+```

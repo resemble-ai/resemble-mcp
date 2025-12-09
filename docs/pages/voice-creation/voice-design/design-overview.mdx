@@ -1,0 +1,163 @@
+---
+title: Design a Voice Overview
+slug: /voice-creation/voice-design/design-overview
+---
+
+Voice Design creates AI-generated voices from text descriptions—no audio recordings required. Describe the voice you want, choose from three candidates, and start generating speech instantly.
+
+## How It Works
+
+Voice Design uses AI to generate synthetic voices based on your text prompt. Instead of cloning an existing voice from audio samples, you describe characteristics like age, accent, tone, and style, and the system creates unique voices matching your description.
+
+**Perfect for:**
+- Rapid prototyping when you don't have recordings
+- Creating fictional or character voices
+- Testing different voice styles quickly
+- Projects where recording voice talent isn't feasible
+
+## The Complete Flow
+
+### Step 1: Write a Descriptive Prompt
+
+Describe the voice you want. Be specific about:
+- **Demographics**: Age, gender
+- **Accent/Language**: British, American Southern, neutral, etc.
+- **Tone**: Warm, authoritative, energetic, calm
+- **Style**: Professional narrator, friendly guide, character voice
+
+**Example prompts:**
+- "A middle-aged female with an Australian accent, friendly and approachable, like a knowledgeable tour guide"
+- "A young male with a British accent, energetic and enthusiastic, like a sports commentator"
+- "An elderly male with a deep, authoritative voice, calm and trustworthy, like a documentary narrator"
+
+<Note>
+  Need help writing effective prompts? See our [Prompting Guide](/guides/voice-design/how-to-prompt) for tips and best practices.
+</Note>
+
+### Step 2: Generate Candidates
+
+Call the [Generate Voice Candidates](/voice-creation/voice-design/generate) endpoint with your prompt:
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voice-design' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'user_prompt=A middle-aged female with an Australian accent, friendly and approachable, like a knowledgeable tour guide'
+```
+
+You'll receive **3 different voice candidates** that match your description:
+
+```json
+{
+  "voice_candidates": [
+    {
+      "audio_url": "https://...",
+      "voice_sample_index": 0,
+      "uuid": "abc123"
+    },
+    {
+      "audio_url": "https://...",
+      "voice_sample_index": 1,
+      "uuid": "abc123"
+    },
+    {
+      "audio_url": "https://...",
+      "voice_sample_index": 2,
+      "uuid": "abc123"
+    }
+  ]
+}
+```
+
+**Important:** All three candidates share the same `uuid` (they're from the same generation request). The `voice_sample_index` (0, 1, or 2) identifies which candidate is which.
+
+### Step 3: Listen and Choose
+
+1. Download and listen to all three `audio_url` samples
+2. Pick the one that best matches your needs
+3. Note its `voice_sample_index` (0, 1, or 2)
+4. Save the `uuid` from the response
+
+### Step 4: Create the Voice
+
+Convert your chosen candidate into a usable voice with [Create Voice from Candidate](/voice-creation/voice-design/create-from-candidate):
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voice-design/{uuid}/{voice_sample_index}/create_rapid_voice' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'voice_name=Tour Guide Voice'
+```
+
+**Example** (choosing candidate #1):
+```bash
+curl 'https://app.resemble.ai/api/v2/voice-design/abc123/1/create_rapid_voice' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'voice_name=Tour Guide Voice'
+```
+
+Response:
+```json
+{
+  "voice_uuid": "xyz789"
+}
+```
+
+The voice builds automatically in the background. You can use it immediately, even while it's still training.
+
+### Step 5: Start Generating Speech
+
+Use the `voice_uuid` to generate audio with the TTS endpoint:
+
+```bash
+curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "voice_uuid": "xyz789",
+    "data": "Welcome to Sydney! Today we will explore the Opera House.",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+The voice is immediately usable in:
+- [Synchronous TTS](/voice-generation/text-to-speech/synchronous)
+- [Streaming TTS](/voice-generation/text-to-speech/streaming-http)
+- [WebSocket Streaming](/voice-generation/text-to-speech/streaming-websocket)
+
+## Quick Reference
+
+| Step | Action | Endpoint |
+|------|--------|----------|
+| 1 | Write prompt | - |
+| 2 | Generate candidates | `POST /voice-design` |
+| 3 | Listen & choose | Download audio from `audio_url` |
+| 4 | Create voice | `POST /voice-design/{uuid}/{index}/create_rapid_voice` |
+| 5 | Generate speech | `POST https://f.cluster.resemble.ai/synthesize` |
+
+## Voice Design vs Voice Cloning
+
+| | **Voice Design** | **Voice Cloning** |
+|---|---|---|
+| **Input** | Text description | Audio recordings |
+| **Setup time** | Instant (no recordings needed) | Requires uploading/recording audio |
+| **Voice type** | AI-generated synthetic voices | Clone of a specific person's voice |
+| **Best for** | Quick prototyping, fictional voices | High-fidelity recreation of real voices |
+| **Customization** | Limited to prompt descriptions | Exact replication of source voice |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Generate Candidates" icon="wand-magic-sparkles" href="/voice-creation/voice-design/generate">
+    Start with a text prompt
+  </Card>
+  <Card title="Create Voice" icon="circle-check" href="/voice-creation/voice-design/create-from-candidate">
+    Convert candidate to voice
+  </Card>
+  <Card title="Prompting Guide" icon="lightbulb" href="/guides/voice-design/how-to-prompt">
+    Learn to write better prompts
+  </Card>
+  <Card title="Generate Speech" icon="volume" href="/voice-generation/text-to-speech/overview">
+    Start creating audio
+  </Card>
+</CardGroup>
+

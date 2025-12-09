@@ -1,0 +1,38 @@
+---
+title: List Audio Edits
+slug: /audio-tools/audio-edit/list
+---
+
+`GET https://app.resemble.ai/api/v2/edit`
+
+Retrieve a paginated list of audio edits for your team.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `page` | integer | ✅ | Page number. |
+| `page_size` | integer | ❌ | Items per page. |
+
+```bash
+curl 'https://app.resemble.ai/api/v2/edit?page=1&page_size=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "total_results": 10,
+  "page_count": 1,
+  "items": [
+    {
+      "uuid": "EDIT_UUID",
+      "voice_uuid": "VOICE_UUID",
+      "original_transcript": "Hello there",
+      "target_transcript": "Howdy there",
+      "input_audio_url": "https://...",
+      "result_audio_url": "https://...",
+      "error": null
+    }
+  ]
+}
+```

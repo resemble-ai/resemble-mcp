@@ -1,0 +1,100 @@
+---
+title: Apply Watermark
+slug: /detect/watermark/apply
+---
+
+> **Beta:** Watermark API is currently in beta. Please [contact us](https://www.resemble.ai/schedule-a-demo/?utm_source=resemble_docs_watermark) if you would like to be added to the beta program.
+
+Apply a watermark to an audio file using the provided URL.
+
+`POST https://app.resemble.ai/api/v2/watermark/apply`
+
+## Request Parameters
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `url` | string | ✅ | HTTPS URL to audio file (must be valid media format). |
+| `qr_code` | string | ❌ | QR code URL prefix (watermark UUID will be appended). |
+
+## Example
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/audio/source.wav"
+  }'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "JOB_UUID",
+    "metrics": null,
+    "watermarked_audio": null,
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+<Note>
+URL must be HTTPS and point to a valid media file. Processing is asynchronous.
+</Note>
+
+## Fetch Apply Result
+
+Retrieve the result of an applied watermark using the provided UUID.
+
+`GET https://app.resemble.ai/api/v2/watermark/apply/{uuid}/result`
+
+### Example
+
+```bash
+curl --request GET 'https://app.resemble.ai/api/v2/watermark/apply/JOB_UUID/result' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json'
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "JOB_UUID",
+    "created_at": "2024-01-01T00:00:00.000Z",
+    "updated_at": "2024-01-01T00:00:00.000Z",
+    "watermarked_audio": "https://app.resemble.ai/rails/active_storage/..."
+  }
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `success` | boolean | Indicates whether the operation was successful |
+| `item.uuid` | string | Unique identifier for the watermark job |
+| `item.created_at` | string | Timestamp of when the job was created |
+| `item.updated_at` | string | Timestamp of when the job was last updated |
+| `item.watermarked_audio` | string | Signed URL to the watermarked audio file |
+
+> **Important:** The signed `watermarked_audio` URL expires; download and store the asset promptly.
+
+## Error Handling
+
+If the request is unsuccessful, you will receive an error response:
+
+```json
+{
+  "success": false,
+  "error": "Invalid audio file format. Please provide a WAV file."
+}
+```
+
+Ensure that you provide a valid URL, and that the audio file is in WAV format and accessible via HTTPS.

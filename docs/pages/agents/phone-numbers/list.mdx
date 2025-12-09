@@ -1,0 +1,143 @@
+---
+title: List Phone Numbers
+slug: /agents/phone-numbers/list
+---
+
+Retrieve all phone numbers for the authenticated team, optionally filtered by agent or availability.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/phone_numbers
+```
+
+## Alternative Endpoints
+
+```bash
+# List phone numbers for specific agent
+GET https://app.resemble.ai/api/v2/agents/{agent_uuid}/phone_numbers
+
+# List only available (unlinked) phone numbers
+GET https://app.resemble.ai/api/v2/phone_numbers?available=true
+```
+
+## Query Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| available | boolean | Filter for unlinked phone numbers (optional) |
+
+## Example Requests
+
+### List All Phone Numbers
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/phone_numbers" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### List Phone Numbers for Specific Agent
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/phone_numbers" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+### List Only Available Phone Numbers
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/phone_numbers?available=true" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": 1,
+      "phone_number": "+14155551234",
+      "label": "Support Line",
+      "supports_inbound": true,
+      "supports_outbound": false,
+      "provider": "twilio",
+      "status": "active",
+      "agent_id": 123,
+      "agent_name": "Customer Support Agent",
+      "agent_uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "outbound_trunk": {
+        "twilio_trunk_sid": "TK...",
+        "domain_name": "example.pstn.twilio.com",
+        "configured": true,
+        "configured_at": "2025-01-27T10:00:00Z"
+      },
+      "inbound_trunk": {
+        "twilio_trunk_sid": "TK...",
+        "domain_name": "example.pstn.twilio.com",
+        "configured": true,
+        "configured_at": "2025-01-27T10:00:00Z",
+        "livekit_trunk_id": "TR_...",
+        "livekit_dispatch_rule_id": "DR_...",
+        "livekit_configured": true,
+        "livekit_configured_at": "2025-01-27T10:00:00Z"
+      },
+      "twilio_account_sid": "AC...",
+      "has_twilio_credentials": true,
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    }
+  ],
+  "count": 1
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of phone number objects |
+| count | integer | Total number of phone numbers |
+| id | integer | Phone number ID |
+| phone_number | string | E.164 formatted phone number |
+| label | string | Human-readable label |
+| supports_inbound | boolean | Whether inbound calls are supported |
+| supports_outbound | boolean | Whether outbound calls are supported |
+| provider | string | Provider: "twilio" |
+| status | string | Status: "active", "corrupted", or "deleting" |
+| agent_id | integer | Linked agent ID (null if unlinked) |
+| agent_name | string | Linked agent name (null if unlinked) |
+| agent_uuid | string | Linked agent UUID (null if unlinked) |
+| outbound_trunk | object | Outbound trunk configuration |
+| inbound_trunk | object | Inbound trunk configuration |
+| twilio_account_sid | string | Twilio account SID |
+| has_twilio_credentials | boolean | Whether Twilio auth token is configured |
+| created_at | string | ISO8601 timestamp |
+| updated_at | string | ISO8601 timestamp |
+
+### Outbound Trunk Object
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| twilio_trunk_sid | string | Twilio SIP trunk SID |
+| domain_name | string | SIP domain name |
+| configured | boolean | Whether trunk is configured |
+| configured_at | string | ISO8601 timestamp of configuration |
+
+### Inbound Trunk Object
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| twilio_trunk_sid | string | Twilio SIP trunk SID |
+| domain_name | string | SIP domain name |
+| configured | boolean | Whether Twilio trunk is configured |
+| configured_at | string | ISO8601 timestamp of Twilio configuration |
+| livekit_trunk_id | string | LiveKit trunk ID |
+| livekit_dispatch_rule_id | string | LiveKit dispatch rule ID |
+| livekit_configured | boolean | Whether LiveKit is configured |
+| livekit_configured_at | string | ISO8601 timestamp of LiveKit configuration |

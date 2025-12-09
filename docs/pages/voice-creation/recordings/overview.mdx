@@ -1,0 +1,24 @@
+---
+title: Recording Resource
+slug: /voice-creation/recordings
+---
+
+Recordings are user-supplied audio samples used to train professional and rapid voices.
+
+## Schema
+
+```ts
+interface Recording {
+  uuid: string;
+  name: string;
+  text: string;
+  emotion: string;
+  is_active: boolean;
+  fill: boolean;
+  audio_src?: string;
+  created_at: string; // ISO 8601
+  updated_at: string; // ISO 8601
+}
+```
+
+Inactive recordings are ignored during training. Use the endpoints below to manage them.

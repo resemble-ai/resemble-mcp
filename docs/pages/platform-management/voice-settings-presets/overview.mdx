@@ -1,0 +1,105 @@
+---
+title: Voice Settings Presets
+slug: /platform-management/voice-settings-presets
+---
+
+Voice Settings Presets allow you to save and reuse combinations of voice settings (pace, pitch, temperature, etc.) for text-to-speech synthesis. Presets make it easy to maintain consistent voice styles across multiple synthesis requests without having to specify individual settings each time.
+
+## Use Cases
+
+- **Consistent Branding**: Create presets for different content types (ads, narration, customer service)
+- **Quick Experimentation**: Save different voice styles and switch between them easily
+- **Personal Library**: Build your own collection of voice configurations for different projects
+- **Efficient Workflow**: Reuse proven voice configurations without remembering exact parameter values
+
+## Limitations
+
+- Maximum **5 custom presets** per user
+- Preset names must be unique among your active presets
+- Default/public presets (created by Resemble) cannot be modified or deleted
+- Default presets do not count towards your 5 preset limit
+
+## Settings Parameters
+
+Voice Settings Presets support the following parameters:
+
+### pace (0.2 - 2.0)
+
+Controls speech speed. Default: `1.0`
+
+- `< 1.0`: Slower speech
+- `1.0`: Normal speed
+- `> 1.0`: Faster speech
+
+### temperature (0.1 - 5.0)
+
+Controls voice variation and randomness. Default: `0.8`
+
+- Lower values: More consistent, predictable voice
+- Higher values: More varied, expressive voice
+
+### pitch (-10 to 10)
+
+Adjusts voice pitch (only applied for Voice Conversion/STS). Default: `0.0`
+
+- Negative values: Lower pitch
+- Positive values: Higher pitch
+
+### useHd (boolean)
+
+Enable high-definition audio quality. Default: `false`
+
+- `true`: HD quality (may cost more credits)
+- `false`: Standard quality
+
+### exaggeration (0.0 - 1.0)
+
+Controls emotional expressiveness. Default: `0.5`
+
+- `0.0`: Minimal emotion
+- `1.0`: Maximum emotional emphasis
+
+### description (string, max 1000 characters)
+
+Text prompt describing desired voice style. Default: `""`
+
+- Examples: "Speak in a calm and soothing tone", "Sound excited and energetic"
+
+## Using Presets with Synthesis
+
+Once created, include the `voice_settings_preset_uuid` parameter in your synthesis requests:
+
+```json
+{
+  "voice_uuid": "your-voice-uuid",
+  "data": "Hello from Resemble!",
+  "sample_rate": 48000,
+  "voice_settings_preset_uuid": "123e4567-e89b-12d3-a456-426614174000"
+}
+```
+
+### Important: Preset Priority Over SSML
+
+**When using `voice_settings_preset_uuid`, preset settings will OVERRIDE any equivalent SSML settings in your `data` field.**
+
+If you need fine-grained SSML control over pace, pitch, or other voice settings, do NOT use a preset UUID. Instead, pass your SSML in the `data` field without the `voice_settings_preset_uuid` parameter.
+
+## Resource Schema
+
+```ts
+interface VoiceSettingsPreset {
+  uuid: string;
+  name: string;
+  settings: {
+    pace: number;
+    temperature: number;
+    pitch: number;
+    useHd: boolean;
+    exaggeration: number;
+    description: string;
+  };
+  is_public: boolean;
+  created_at: string;
+  updated_at: string;
+}
+```

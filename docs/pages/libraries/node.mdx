@@ -1,0 +1,331 @@
+---
+title: Node.js SDK
+slug: /libraries/node
+---
+
+Install the official package:
+
+```bash
+npm install @resemble/node
+```
+
+Initialize the client with your API token:
+
+```ts
+import { Resemble } from "@resemble/node";
+
+Resemble.setApiKey(process.env.RESEMBLE_API_KEY!);
+```
+
+## Projects
+
+### List All Projects
+
+```ts
+const page = 1;
+const pageSize = 10;
+
+const response = await Resemble.v2.projects.all(page, pageSize);
+const projects = response.items;
+```
+
+### Get a Project
+
+```ts
+await Resemble.v2.projects.get(projectUuid);
+```
+
+### Create a Project
+
+```ts
+await Resemble.v2.projects.create({
+  name: "Cooking Podcast",
+  description: "Clips generated for our Thursday night cooking podcast",
+  is_collaborative: true,
+  is_archived: false
+});
+```
+
+### Update a Project
+
+```ts
+await Resemble.v2.projects.update(projectUuid, {
+  name: "Friday Night Cooking Podcast",
+  description: "Clips generated for the podcast",
+  is_collaborative: true,
+  is_archived: false
+});
+```
+
+### Delete a Project
+
+```ts
+await Resemble.v2.projects.delete(projectUuid);
+```
+
+## Voices
+
+### List All Voices
+
+```ts
+const page = 1;
+const pageSize = 10;
+
+const response = await Resemble.v2.voices.all(page, pageSize);
+const voices = response.items;
+```
+
+### Get a Voice
+
+```ts
+await Resemble.v2.voices.get(voiceUuid);
+```
+
+### Create a Voice
+
+```ts
+await Resemble.v2.voices.create({
+  name: "Chef",
+  dataset_url: "https://example.com/dataset.zip",
+  callback_uri: "http://example.com/cb",
+  language: "en-US"
+});
+```
+
+### Build a Voice
+
+```ts
+await Resemble.v2.voices.build(voiceUuid);
+```
+
+### Delete a Voice
+
+```ts
+await Resemble.v2.voices.delete(voiceUuid);
+```
+
+## Recordings
+
+### List All Recordings
+
+```ts
+const voiceUuid = '...';
+const page = 1;
+const pageSize = 10;
+
+const response = await Resemble.v2.recordings.all(voiceUuid, page, pageSize);
+const recordings = response.items;
+```
+
+### Get a Recording
+
+```ts
+await Resemble.v2.recordings.get(voiceUuid, recordingUuid);
+```
+
+### Create a Recording
+
+```ts
+const fs = require('fs');
+const file = fs.createReadStream('happy_sample.wav');
+const fileSize = fs.statSync('happy_sample.wav').size;
+
+await Resemble.v2.recordings.create(voiceUuid, {
+  emotion: 'happy',
+  is_active: true,
+  name: 'happy_sample',
+  text: 'Hey, this is a happy sample!'
+}, file, fileSize);
+```
+
+### Update a Recording
+
+```ts
+await Resemble.v2.recordings.update(voiceUuid, recordingUuid, {
+  emotion: 'happy',
+  is_active: false,
+  name: 'happy_sample',
+  text: 'Hey, this is a happy sample!'
+});
+```
+
+### Delete a Recording
+
+```ts
+await Resemble.v2.recordings.delete(voiceUuid, recordingUuid);
+```
+
+## Clips
+
+### List All Clips
+
+```ts
+const projectUuid = '...';
+const page = 1;
+const pageSize = 10;
+
+const response = await Resemble.v2.clips.all(projectUuid, page, pageSize);
+const clips = response.items;
+```
+
+### Get a Clip
+
+```ts
+await Resemble.v2.clips.get(projectUuid, clipUuid);
+```
+
+### Create a Clip (Synchronous)
+
+```ts
+const response = await Resemble.v2.clips.createSync(projectUuid, {
+  title: "Welcome",
+  voice_uuid: voiceUuid,
+  body: "Welcome to our show",
+  is_archived: false
+});
+
+if (response.success) {
+  const clip = response.item;
+  console.log(clip.audio_src);
+}
+```
+
+### Create a Clip (Direct Synthesis)
+
+```ts
+Resemble.setSynthesisUrl('https://f.cluster.resemble.ai');
+
+const response = await Resemble.v2.clips.createDirect({
+  voice_uuid: voiceUuid,
+  project_uuid: projectUuid,
+  title: 'My Clip',
+  data: 'Hello, how are you?',
+  precision: 'PCM_32',
+  output_format: 'wav',
+  sample_rate: 48000
+});
+```
+
+### Stream a Clip
+
+```ts
+// Configure synthesis URL for streaming
+Resemble.setApiKey('YOUR_API_TOKEN');
+Resemble.setSynthesisUrl('YOUR_SYNTH_ENDPOINT');
+
+for await (const chunk of Resemble.v2.clips.stream({
+  data: 'This is a streaming test',
+  project_uuid: projectUuid,
+  voice_uuid: voiceUuid
+})) {
+  // Process audio chunk (Buffer)
+  console.log('Received chunk:', chunk.length);
+}
+```
+
+#### Streaming Options
+
+```ts
+stream: async function* (
+  streamInput: {
+    data: string
+    project_uuid: string
+    voice_uuid: string
+    sample_rate?: 8000 | 16000 | 22050 | 44100 | 32000
+    precision?: 'MULAW' | 'PCM_16' | 'PCM_24' | 'PCM_32'
+  },
+  streamConfig?: {
+    bufferSize?: number       // Default: 4096
+    ignoreWavHeader?: boolean // Default: false
+    getTimeStamps?: boolean   // Default: false
+  }
+): AsyncGenerator
+```
+
+### Update a Clip (Async)
+
+```ts
+await Resemble.v2.clips.updateAsync(projectUuid, clipUuid, {
+  voice_uuid: voiceUuid,
+  body: 'This is an updated async test',
+  callback_uri: 'https://example.com/callback/resemble-clip',
+  title: 'Updated Title',
+  sample_rate: 48000
+});
+```
+
+### Delete a Clip
+
+```ts
+await Resemble.v2.clips.delete(projectUuid, clipUuid);
+```
+
+## Audio Edits
+
+### List All Audio Edits
+
+```ts
+const page = 1;
+await Resemble.v2.edits.all(page);
+```
+
+### Get an Audio Edit
+
+```ts
+const audioEditUuid = '...';
+await Resemble.v2.edits.get(audioEditUuid);
+```
+
+### Create an Audio Edit
+
+```ts
+const fs = require('fs');
+const file = fs.createReadStream('original_audio.wav');
+const fileSize = fs.statSync('original_audio.wav').size;
+
+await Resemble.v2.edits.create({
+  original_transcript: 'I am happy today',
+  target_transcript: 'You are happy today',
+  voice_uuid: voiceUuid
+}, file, fileSize);
+```
+
+## Term Substitutions
+
+### List All Term Substitutions
+
+```ts
+const page = 1;
+const pageSize = 10;
+
+const response = await Resemble.v2.termSubstitutions.all(page, pageSize);
+const substitutions = response.items;
+```
+
+### Get a Term Substitution
+
+```ts
+const tsUuid = '...';
+const response = await Resemble.v2.termSubstitutions.get(tsUuid);
+const substitution = response.item;
+```
+
+### Create a Term Substitution
+
+```ts
+const response = await Resemble.v2.termSubstitutions.create('Original', 'Replacement');
+const substitution = response.item;
+```
+
+### Delete a Term Substitution
+
+```ts
+const substitutionUuid = '...';
+await Resemble.v2.termSubstitutions.delete(substitutionUuid);
+```
+
+## Additional Resources
+
+- [Creating Clips Guide](/guides/creating-clips/nodejs) - Step-by-step tutorial
+- [WebSocket Streaming Guide](/guides/creating-clips/websocket-streaming) - Real-time audio streaming
+- [GitHub Examples](https://github.com/resemble-ai/resemble-examples) - Sample code and projects

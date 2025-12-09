@@ -1,0 +1,54 @@
+---
+title: Update Recording
+slug: /voice-creation/recordings/update
+---
+
+`PATCH https://app.resemble.ai/api/v2/voices/{voice_uuid}/recordings/{uuid}` or `PUT https://app.resemble.ai/api/v2/voices/{voice_uuid}/recordings/{uuid}`
+
+Update recording metadata.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `voice_uuid` | string | ✅ | Voice UUID (URL parameter). |
+| `uuid` | string | ✅ | Recording UUID (URL parameter). |
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | ❌ | Recording name (max 256 characters). |
+| `text` | string | ❌ | Transcript (max 1024 characters). |
+| `emotion` | string | ❌ | Emotion label (max 64 characters). |
+| `is_active` | boolean | ❌ | Whether recording is active for training. |
+| `fill` | boolean | ❌ | Whether to use for fill/speech-to-speech. |
+
+```bash
+curl --request PATCH 'https://app.resemble.ai/api/v2/voices/VOICE_UUID/recordings/RECORDING_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "emotion": "excited",
+    "is_active": true,
+    "name": "launch_intro",
+    "text": "This is our big announcement!"
+  }'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "RECORDING_UUID",
+    "name": "launch_intro",
+    "text": "This is our big announcement!",
+    "emotion": "excited",
+    "fill": false,
+    "is_active": true,
+    "audio_src": "https://...",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T11:10:00Z"
+  }
+}
+```
+
+<Note>
+Cannot activate recordings marked as outliers.
+</Note>

@@ -1,0 +1,118 @@
+---
+title: Delete Phone Number
+slug: /agents/phone-numbers/delete
+---
+
+Delete a phone number and clean up external resources (Twilio trunk configuration).
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/phone_numbers/{id}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| id | integer | The phone number ID |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/phone_numbers/1" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "message": "Phone number deleted successfully"
+}
+```
+
+## Response (Corrupted - Cleanup Failed)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Failed to cleanup external resources. Phone number marked as corrupted. Please see documentation for manual cleanup: https://docs.resemble.ai/phone-numbers/cleanup"]
+  },
+  "message": "Failed to delete phone number"
+}
+```
+
+## Cleanup Process
+
+When deleting a phone number:
+
+1. **Status Update**: Phone number is marked as "deleting"
+2. **Twilio Cleanup** (if configured):
+   - Deletes SIP trunk
+   - Removes credential lists
+   - Removes connection policies
+3. **Database Deletion**: Phone number record is deleted
+
+## Failure Handling
+
+If Twilio cleanup fails:
+
+- Phone number is marked as **"corrupted"**
+- Phone number record is kept in database
+- Error message includes cleanup instructions
+- Use [Force Delete](/agents/phone-numbers/force-delete) to remove corrupted phone numbers
+
+## Common Error Scenarios
+
+### Invalid Twilio Credentials
+
+If Twilio credentials are invalid or expired during deletion:
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Failed to cleanup external resources. Phone number marked as corrupted."]
+  },
+  "message": "Failed to delete phone number"
+}
+```
+
+**Resolution**:
+1. Manually clean up Twilio trunk in Twilio console
+2. Use [Force Delete](/agents/phone-numbers/force-delete) to remove the phone number record
+
+### Network Errors
+
+If network issues prevent communication with Twilio:
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Failed to cleanup external resources. Phone number marked as corrupted."]
+  },
+  "message": "Failed to delete phone number"
+}
+```
+
+**Resolution**:
+1. Wait for network connectivity to restore
+2. Retry deletion (system will attempt cleanup again)
+3. If issues persist, manually clean up and use Force Delete
+
+## Important Notes
+
+- **Agent unlinking**: Phone numbers are automatically unlinked from agents before deletion
+- **Permanent action**: Deletion cannot be undone
+- **External cleanup**: Twilio resources are removed to prevent orphaned configurations
+- **Corrupted state**: Failed cleanup results in corrupted state requiring manual intervention
+
+## See Also
+
+- [Force Delete Phone Number](/agents/phone-numbers/force-delete) - Force delete corrupted phone numbers
+- [Phone Numbers Overview](/agents/phone-numbers/overview) - Learn about phone number management

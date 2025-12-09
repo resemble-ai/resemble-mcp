@@ -1,0 +1,67 @@
+---
+title: Receiving Audio Data
+slug: /guides/creating-clips/websocket-streaming/receiving-audio
+---
+
+1. Connect to `wss://websocket.cluster.resemble.ai/stream`
+2. Send a synthesis request (JSON payload)
+3. Stream audio frames (JSON or binary)
+4. Wait for the terminal `audio_end` message
+
+## Request Payload
+
+```json
+{
+  "voice_uuid": "<voice_uuid>",
+  "data": "<text or SSML>",
+  "binary_response": false,
+  "request_id": 0,
+  "output_format": "wav",
+  "sample_rate": 32000,
+  "precision": "PCM_32",
+  "no_audio_header": false
+}
+```
+
+| Field | Required | Description |
+| --- | --- | --- |
+| `voice_uuid` | ✅ | Voice used for synthesis. |
+| `data` | ✅ | Text or SSML. |
+| `binary_response` | ❌ | `false` for JSON frames (base64 audio); `true` for raw bytes. |
+| `output_format` | ❌ | `wav` (default) or `mp3`. |
+| `sample_rate` | ❌ | `8000`, `16000`, `22050`, `32000`, or `44100`. |
+| `precision` | ❌ | PCM bit depth (`PCM_32`, `PCM_24`, `PCM_16`, `MULAW`). |
+| `no_audio_header` | ❌ | Skip the WAV header when streaming PCM. |
+| `request_id` | ❌ | Optional integer echoed in responses. |
+
+## JSON Frames
+
+```json
+{
+  "type": "audio",
+  "audio_content": "<base64>",
+  "audio_timestamps": {
+    "graph_chars": ["H", "e"],
+    "graph_times": [[0.0374, 0.1247], [0.0873, 0.1746]],
+    "phon_chars": ["h", "ˈe"],
+    "phon_times": [[0.0374, 0.1247], [0.0873, 0.1746]]
+  },
+  "sample_rate": 32000,
+  "request_id": 0
+}
+```
+
+## Binary Frames
+
+When `binary_response = true`, frames contain contiguous audio bytes. Include a WAV header (default) or set `no_audio_header = true` if you want raw PCM chunks.
+
+## Termination Message
+
+```json
+{
+  "type": "audio_end",
+  "request_id": 0
+}
+```
+
+Handle the terminal message to cleanly stop playback and reset application state.

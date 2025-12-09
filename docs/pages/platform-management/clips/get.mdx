@@ -1,0 +1,40 @@
+---
+title: Get Clip
+slug: /platform-management/clips/get
+---
+
+`GET https://app.resemble.ai/api/v2/projects/{project_uuid}/clips/{clip_uuid}`
+
+## Example Request
+
+```bash
+curl 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID/clips/CLIP_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "CLIP_UUID",
+    "title": "Intro",
+    "body": "Welcome to our show",
+    "voice_uuid": "VOICE_UUID",
+    "voice_name": "Professional Voice",
+    "is_archived": false,
+    "audio_src": "https://...",
+    "character_count": 20,
+    "duration": 2.5,
+    "last_generated_at": "2024-01-15T10:32:00Z",
+    "timestamps": {
+      "graph_chars": ["W", "e", "l", "c", "o", "m", "e"],
+      "graph_times": [[0, 120], [120, 240], ...],
+      "phon_chars": [],
+      "phon_times": []
+    },
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:32:00Z"
+  }
+}

@@ -1,0 +1,28 @@
+---
+title: Delete Voice Settings Preset
+slug: /platform-management/voice-settings-presets/delete
+---
+
+`DELETE https://app.resemble.ai/api/v2/voice_settings_presets/{uuid}`
+
+Delete a voice settings preset.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `uuid` | string | ✅ | Preset UUID (URL parameter). |
+
+```bash
+curl --request DELETE 'https://app.resemble.ai/api/v2/voice_settings_presets/PRESET_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "message": "Preset deleted successfully"
+}
+```
+
+<Note>
+Can only delete your own presets.
+</Note>

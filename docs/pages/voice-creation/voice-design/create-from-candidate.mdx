@@ -1,0 +1,36 @@
+---
+title: Create Voice from Candidate
+slug: /voice-creation/voice-design/create-from-candidate
+---
+
+`POST https://app.resemble.ai/api/v2/voice-design/{voice_design_model_uuid}/{voice_sample_index}/create_rapid_voice` or `POST https://app.resemble.ai/api/v2/voice-design/{voice_design_model_uuid}/{voice_sample_index}/create`
+
+Create a rapid voice from a selected voice design candidate.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `voice_design_model_uuid` | string | ✅ | Voice design UUID (URL parameter). |
+| `voice_sample_index` | integer | ✅ | Index of the selected sample (URL parameter). |
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `voice_name` | string | ✅ | Name for the new voice. |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/voice-design/VOICE_DESIGN_UUID/1/create_rapid_voice' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "voice_name": "My API Voice"
+  }'
+```
+
+```json
+{
+  "voice_uuid": "VOICE_UUID"
+}
+```
+
+<Note>
+Returns 202 Accepted status. Voice training begins asynchronously. Voice design must belong to current user. Sample must exist for the given index.
+</Note>

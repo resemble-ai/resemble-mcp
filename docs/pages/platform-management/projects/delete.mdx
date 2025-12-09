@@ -1,0 +1,27 @@
+---
+title: Delete Project
+slug: /platform-management/projects/delete
+---
+
+`DELETE https://app.resemble.ai/api/v2/projects/{uuid}`
+
+Delete a project.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `uuid` | string | ✅ | Project UUID (URL parameter). |
+
+```bash
+curl --request DELETE 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true
+}
+```
+
+<Note>
+Deletion is permanent. Ensure you have exported any required clips first.
+</Note>

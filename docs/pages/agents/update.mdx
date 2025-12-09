@@ -1,0 +1,134 @@
+---
+title: Update Agent
+slug: /agents/update
+---
+
+Update an existing agent's configuration.
+
+## HTTP Request
+
+```bash
+PATCH https://app.resemble.ai/api/v2/agents/{uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The unique identifier of the agent |
+
+## Request Body
+
+All fields are optional. Only provide the fields you want to update. See [Create Agent](/agents/create) for complete field descriptions and validation rules.
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| name | string | Update agent name |
+| voice_uuid | string | Update voice |
+| phone_number_id | integer | Update linked phone number |
+| languages | array | Update supported languages |
+| dynamic_variables | object | Update dynamic variables |
+| asr | object | Update ASR configuration |
+| turn | object | Update turn configuration |
+| llm | object | Update LLM configuration |
+| webhooks | array | Update webhooks |
+| system_tools | object | Update system tool configurations |
+
+> **Note**: When updating nested configurations (asr, llm, turn), you only need to provide the fields you want to change. Omitted fields will retain their current values.
+
+## Example Request
+
+```bash
+curl --request PATCH "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "name": "Updated Agent Name",
+    "llm": {
+      "prompt": "Updated system prompt",
+      "temperature": 0.5
+    }
+  }'
+```
+
+## Example Request - Update Only ASR Keywords
+
+```bash
+curl --request PATCH "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "asr": {
+      "keywords": ["support", "billing", "account", "resemble"]
+    }
+  }'
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "agent": {
+      "name": "Updated Agent Name",
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "languages": ["en-US"],
+      "dynamic_variables": {
+        "customer_name": "{{customer_name}}"
+      },
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T11:30:00Z",
+      "last_active_at": null,
+      "calls_today": 0,
+      "status": "inactive"
+    },
+    "asr": {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": []
+    },
+    "tts": {
+      "voice_uuid": "abc123",
+      "voice_name": "Professional Voice"
+    },
+    "turn": {
+      "turn_timeout": 7,
+      "silence_end_call_timeout": -1,
+      "mode": "silence"
+    },
+    "llm": {
+      "prompt": "Updated system prompt",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "reasoning_effort": null,
+      "temperature": 0.5,
+      "timezone": null,
+      "built_in_tools": {}
+    },
+    "phone_numbers": [],
+    "tools_count": 2,
+    "webhooks_count": 0
+  },
+  "message": "Agent updated successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "agent": ["Agent not found or not accessible"],
+    "voice_uuid": ["Voice not found or not accessible"],
+    "asr.model": ["can't be blank"]
+  },
+  "message": "Failed to update agent"
+}
+```
+
+## Validation Rules
+
+See [Create Agent](/agents/create) for detailed validation rules. All create validations apply to updates.

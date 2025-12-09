@@ -1,0 +1,39 @@
+---
+title: List Audio Enhancements
+slug: /audio-tools/audio-enhancement/list
+---
+
+`GET https://app.resemble.ai/api/v2/audio_enhancements`
+
+Retrieve a paginated list of audio enhancements for your team.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `page` | integer | ❌ | Page number. |
+| `page_size` | integer | ❌ | Items per page. |
+
+```bash
+curl 'https://app.resemble.ai/api/v2/audio_enhancements?page=1&page_size=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "total_results": 10,
+  "page_count": 1,
+  "items": [
+    {
+      "uuid": "ENHANCEMENT_UUID",
+      "status": "completed",
+      "error_message": null,
+      "loudness_target_level": -14,
+      "loudness_peak_limit": -1,
+      "enhancement_level": 1.0,
+      "original_audio_url": "https://...",
+      "enhanced_audio_url": "https://..."
+    }
+  ]
+}
+```

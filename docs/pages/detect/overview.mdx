@@ -1,0 +1,97 @@
+---
+title: Deepfake Detection
+slug: /detect
+---
+
+Analyze audio, images, and video for synthetic tampering. Submit media for detection and retrieve structured metrics and visualizations.
+
+## Request Schema
+
+```ts
+interface DetectionRequest {
+  url: string; // publicly accessible media URL
+  callback_url?: string;
+  visualize?: boolean;
+  frame_length?: number;
+  start_region?: number;
+  end_region?: number;
+  max_video_fps?: number;
+  max_video_secs?: number;
+}
+```
+
+## Response Shapes
+
+```ts
+interface BaseDetectionResult {
+  success: true;
+  item: {
+    uuid: string;
+    created_at: string;
+    updated_at: string;
+    duration: string;
+    media_type: string;
+    url?: string;
+  };
+}
+
+interface AudioDetectionResult extends BaseDetectionResult {
+  item: BaseDetectionResult["item"] & {
+    metrics: {
+      label: string;
+      score: string[];
+      consistency: string;
+      aggregated_score: string;
+      image?: string;
+    };
+  };
+}
+
+interface ImageDetectionResult extends BaseDetectionResult {
+  item: BaseDetectionResult["item"] & {
+    image_metrics: {
+      type: string;
+      label: string;
+      image: string;
+      score: number;
+      children: any[];
+    };
+  };
+}
+
+interface VideoDetectionResult extends BaseDetectionResult {
+  item: BaseDetectionResult["item"] & {
+    metrics: AudioDetectionResult["item"]["metrics"];
+    video_metrics: {
+      label: string;
+      score: number;
+      certainty: number;
+      treeview?: string;
+      children: Array<{
+        type: string;
+        conclusion: string;
+        score: number;
+        certainty: number;
+        "certainty (%)": string;
+        children: Array<{
+          type: string;
+          conclusion: string;
+          score: number;
+          certainty: number;
+          "certainty (%)": string;
+          timestamp: number;
+          children: Array<{
+            type: string;
+            conclusion: string;
+            score: number;
+            certainty: number;
+            "certainty (%)": string;
+          }>;
+        }>;
+      }>;
+    };
+  };
+}
+```
+
+Use the endpoints below to submit jobs and retrieve detection results for each modality.

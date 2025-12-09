@@ -1,0 +1,61 @@
+---
+title: Delete Webhook
+slug: /agents/webhooks/delete
+---
+
+Delete a webhook from an agent.
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/agents/{agent_uuid}/webhooks/{id}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+| id | integer | The webhook ID |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/webhooks/1" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "message": "Webhook deleted successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Cannot delete webhook"]
+  },
+  "message": "Failed to delete webhook"
+}
+```
+
+## Important Notes
+
+- Deletion is permanent and cannot be undone
+- Both pre-call and post-call webhooks can be deleted
+- Deleting a webhook does not affect the agent's ability to handle calls
+- Dynamic variables populated by pre-call webhooks will be empty after deletion
+
+## See Also
+
+- [Create Webhook](/agents/webhooks/create) - Create new webhooks
+- [Update Webhook](/agents/webhooks/update) - Modify webhook configuration
+- [Agent Webhooks Overview](/agents/webhooks/overview) - Learn about webhook types

@@ -1,0 +1,50 @@
+---
+title: Create Voice
+slug: /voice-creation/voices/create
+---
+
+`POST https://app.resemble.ai/api/v2/voices`
+
+Create a new custom voice. Requires Business or Enterprise plan.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | ✅ | Voice name (max 256 characters). |
+| `voice_type` | string | ❌ | Voice type (rapid_voice or professional). Default: professional. |
+| `language` | string | ❌ | Default language code. Default: en-US. |
+| `description` | string | ❌ | Voice description. |
+| `dataset_url` | string | ❌ | URL to training dataset (max 30,000 characters). |
+| `callback_uri` | string | ❌ | Callback URL for training completion (max 1000 characters). |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/voices' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "name": "Chef",
+    "language": "en-US",
+    "voice_type": "professional",
+    "dataset_url": "https://example.com/dataset.zip",
+    "callback_uri": "https://example.com/webhooks/resemble"
+  }'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "VOICE_UUID",
+    "name": "Chef",
+    "status": "pending",
+    "voice_type": "professional",
+    "default_language": "en-US",
+    "description": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+<Note>
+For rapid voices, dataset_url must be a valid audio file. Voice creation respects plan limits for professional and rapid voices.
+</Note>

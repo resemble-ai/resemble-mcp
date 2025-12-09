@@ -1,0 +1,46 @@
+---
+title: Update Project
+slug: /platform-management/projects/update
+---
+
+`PATCH https://app.resemble.ai/api/v2/projects/{project_uuid}` or `PUT https://app.resemble.ai/api/v2/projects/{project_uuid}`
+
+Provide one or more fields to modify the project.
+
+## Request Body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | ❌ | Project name (max 256 characters). |
+| `description` | string | ❌ | Project description (max 1024 characters). |
+| `is_collaborative` | boolean | ❌ | Whether project is collaborative. |
+| `is_archived` | boolean | ❌ | Whether project is archived. |
+
+## Example Request
+
+```bash
+curl --request PUT 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "name": "Podcast Season 2",
+    "description": "Final edits for season 2",
+    "is_collaborative": true,
+    "is_archived": false
+  }'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "PROJECT_UUID",
+    "name": "Podcast Season 2",
+    "description": "Final edits for season 2",
+    "is_collaborative": true,
+    "is_archived": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-21T09:05:00Z"
+  }
+}
+```

@@ -1,0 +1,39 @@
+---
+title: Speech-to-Text
+slug: /voice-generation/speech-to-text
+---
+
+Transcribe audio or video and ask follow-up questions using Intelligence queries.
+
+## Key Capabilities
+
+- Accepts file uploads, signed tokens, or remote URLs
+- Returns transcripts with speaker labels and word-level timestamps
+- Supports Intelligence queries for summaries and insights
+- Handles files up to 500 MB and 20 minutes in duration
+
+## Workflow
+
+1. **Create a job** – Upload content and optionally include an initial Intelligence query.
+2. **Check status** – Poll the job or list active submissions.
+3. **Retrieve results** – Fetch the completed transcript and Intelligence answers.
+4. **Run additional queries** – Ask further questions using the job UUID.
+
+## Access Requirements
+
+| Requirement | Details |
+| --- | --- |
+| Team scope | Operates within the authenticated user's team. |
+| Authentication | Resemble session or API token. |
+
+## Quick Start
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/speech-to-text' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: multipart/form-data' \
+  -F 'file=@/path/to/audio.mp3' \
+  -F 'query=What are the key points discussed?'
+```
+
+Platform-wide rate limits apply. Contact support for higher throughput or dedicated capacity.

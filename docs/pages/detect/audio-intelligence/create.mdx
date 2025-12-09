@@ -1,0 +1,70 @@
+---
+title: Run Intelligence
+slug: /detect/audio-intelligence/create
+---
+
+`POST https://app.resemble.ai/api/v2/audio_intelligence`
+
+Analyzes a media file and returns comprehensive intelligence including speaker details, transcription, emotion detection, AI abnormalities, misinformation signals, and anti-cheating indicators.
+
+## Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `audio_token` | string | ❌ | Token for uploaded audio file (from secure upload). |
+| `url` | string | ❌ | HTTPS URL to audio, image, or video file. |
+| `json` | boolean | ❌ | Return description as JSON. Default: false. |
+
+**Note:** Either `audio_token` or `url` must be provided. Processing is synchronous.
+
+## Example
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/audio_intelligence' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/audio/sample.wav",
+    "json": true
+  }'
+```
+
+## Response
+
+### With `json=false` (default)
+
+```json
+{
+  "success": true,
+  "item": {
+    "description": "This is an adult male speaker with a confident tone discussing product features...",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+### With `json=true`
+
+```json
+{
+  "success": true,
+  "item": {
+    "description": {
+      "speaker_info": "Adult male speaker",
+      "language": "en",
+      "dialect": "en-US",
+      "emotion": "confident",
+      "speaking_style": "conversational",
+      "context": "Product marketing pitch",
+      "message": "Introducing a new feature",
+      "abnormalities": "No anomalies detected",
+      "transcription": "Welcome back to the Resemble product update...",
+      "translation": null,
+      "misinformation": "No misinformation detected"
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+When `json=true`, the description is parsed as JSON if possible. Otherwise, it contains a human-readable narrative string.

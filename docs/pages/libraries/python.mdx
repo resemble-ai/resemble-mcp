@@ -1,0 +1,377 @@
+---
+title: Python SDK
+slug: /libraries/python
+---
+
+Install the package:
+
+```bash
+pip install resemble
+```
+
+Configure the SDK:
+
+```python
+from resemble import Resemble
+
+Resemble.api_key("YOUR_API_TOKEN")
+```
+
+## Projects
+
+### List All Projects
+
+```python
+page = 1
+page_size = 10
+
+response = Resemble.v2.projects.all(page, page_size)
+projects = response['items']
+```
+
+### Get a Project
+
+```python
+project_uuid = '<project_uuid>'
+
+response = Resemble.v2.projects.get(project_uuid)
+project = response['item']
+```
+
+### Create a Project
+
+```python
+name = 'My project'
+description = 'My description'
+is_archived = False
+is_collaborative = False
+
+response = Resemble.v2.projects.create(name, description, is_collaborative, is_archived)
+project = response['item']
+```
+
+### Update a Project
+
+```python
+project_uuid = '<project_uuid>'
+name = 'My project (archived)'
+description = 'My description (this project has been archived)'
+is_archived = True
+is_collaborative = False
+
+response = Resemble.v2.projects.update(project_uuid, name, description, is_collaborative, is_archived)
+project = response['item']
+```
+
+### Delete a Project
+
+```python
+project_uuid = '<project_uuid>'
+
+response = Resemble.v2.projects.delete(project_uuid)
+```
+
+## Voices
+
+### List All Voices
+
+```python
+page = 1
+page_size = 10
+
+response = Resemble.v2.voices.all(page, page_size)
+voices = response['items']
+```
+
+### Get a Voice
+
+```python
+voice_uuid = '<voice_uuid>'
+
+response = Resemble.v2.voices.get(voice_uuid)
+voice = response['item']
+```
+
+### Create a Voice
+
+```python
+name = 'Test Voice'
+
+response = Resemble.v2.voices.create(
+    name,
+    dataset_url="https://example.com/dataset.zip",
+    callback_uri="http://example.com/cb",
+    language="en-US"
+)
+voice = response['item']
+```
+
+### Build a Voice
+
+```python
+voice_uuid = '<voice_uuid>'
+
+response = Resemble.v2.voices.build(voice_uuid)
+```
+
+### Delete a Voice
+
+```python
+voice_uuid = '<voice_uuid>'
+
+response = Resemble.v2.voices.delete(voice_uuid)
+```
+
+## Recordings
+
+### List All Recordings
+
+```python
+voice_uuid = '<voice_uuid>'
+page = 1
+page_size = 10
+
+response = Resemble.v2.recordings.all(voice_uuid, page, page_size)
+recordings = response['items']
+```
+
+### Get a Recording
+
+```python
+voice_uuid = '<voice_uuid>'
+recording_uuid = '<recording_uuid>'
+
+response = Resemble.v2.recordings.get(voice_uuid, recording_uuid)
+recording = response['item']
+```
+
+### Create a Recording
+
+```python
+voice_uuid = '<voice_uuid>'
+name = 'recording'
+text = 'This is a test'
+is_active = True
+emotion = 'neutral'
+
+with open("path/to/audio.wav", 'rb') as file:
+    response = Resemble.v2.recordings.create(voice_uuid, file, name, text, is_active, emotion)
+    recording = response['item']
+```
+
+### Update a Recording
+
+```python
+voice_uuid = '<voice_uuid>'
+recording_uuid = '<uuid>'
+name = 'recording'
+text = 'This is a test'
+is_active = True
+emotion = 'neutral'
+
+response = Resemble.v2.recordings.update(voice_uuid, recording_uuid, name, text, is_active, emotion)
+recording = response['item']
+```
+
+### Delete a Recording
+
+```python
+voice_uuid = '<voice_uuid>'
+recording_uuid = '<recording_uuid>'
+
+response = Resemble.v2.recordings.delete(voice_uuid, recording_uuid)
+```
+
+## Clips
+
+### List All Clips
+
+```python
+project_uuid = '<project_uuid>'
+page = 1
+page_size = 10
+
+response = Resemble.v2.clips.all(project_uuid, page, page_size)
+clips = response['items']
+```
+
+### Get a Clip
+
+```python
+project_uuid = '<project_uuid>'
+clip_uuid = '<clip_uuid>'
+
+response = Resemble.v2.clips.get(project_uuid, clip_uuid)
+clip = response['item']
+```
+
+### Create a Clip (Synchronous)
+
+```python
+response = Resemble.v2.clips.create_sync(
+    project_uuid,
+    voice_uuid,
+    "Welcome to Resemble",
+    title="Intro"
+)
+
+if response["success"]:
+    clip = response["item"]
+    print(clip["audio_src"])
+else:
+    print(response)
+```
+
+### Create a Clip (Direct Synthesis)
+
+```python
+voice_uuid = '<voice_uuid>'
+project_uuid = '<project_uuid>'
+output_format = 'wav'
+data = 'Hello, how are you?'
+title = 'Greeting'
+precision = 'PCM_32'
+sample_rate = 48000
+
+response = Resemble.v2.clips.create_direct(
+    project_uuid,
+    voice_uuid,
+    data,
+    title,
+    precision,
+    output_format,
+    sample_rate
+)
+
+clip = response['audio_content']
+```
+
+### Stream a Clip
+
+```python
+# Configure synthesis URL for streaming
+Resemble.api_key('YOUR_API_TOKEN')
+Resemble.syn_server_url('<syn_server_url>')  # Obtain from https://app.resemble.ai/account/api
+
+project_uuid = '<project_uuid>'
+voice_uuid = '<voice_uuid>'
+body = 'This is a streaming test'
+
+try:
+    for chunk in Resemble.v2.clips.stream(project_uuid, voice_uuid, body):
+        # chunk is a byte array of shorts (int 16) representing WAV audio
+        # Process the audio chunk here
+        pass
+except Exception as e:
+    # Handle exceptions
+    print(f"Error: {e}")
+```
+
+### Update a Clip (Async)
+
+```python
+project_uuid = '<project_uuid>'
+clip_uuid = '<clip_uuid>'
+voice_uuid = '<voice_uuid>'
+callback_uri = 'https://example.com/callback/resemble-clip'
+body = 'This is an updated async test'
+
+response = Resemble.v2.clips.update_async(
+    project_uuid,
+    clip_uuid,
+    voice_uuid,
+    callback_uri,
+    body,
+    title=None,
+    sample_rate=None,
+    output_format=None,
+    precision=None,
+    include_timestamps=None,
+    is_archived=None
+)
+clip = response['item']
+```
+
+### Delete a Clip
+
+```python
+project_uuid = '<project_uuid>'
+clip_uuid = '<clip_uuid>'
+
+response = Resemble.v2.clips.delete(project_uuid, clip_uuid)
+```
+
+## Audio Edits
+
+### List All Audio Edits
+
+```python
+page = 1
+response = Resemble.v2.edits.all(page)
+audio_edits = response['items']
+```
+
+### Get an Audio Edit
+
+```python
+audio_edit_uuid = '<audio_edit_uuid>'
+response = Resemble.v2.edits.get(audio_edit_uuid)
+audio_edit = response['item']
+```
+
+### Create an Audio Edit
+
+```python
+original_transcript = 'Hi, how are you?'
+target_transcript = 'Hello, how are you?'
+voice_uuid = '<voice_uuid>'
+
+with open('path/to/audio.wav', 'rb') as file:
+    response = Resemble.v2.edits.create(original_transcript, target_transcript, voice_uuid, file)
+    audio_edit = response['item']
+```
+
+### Create and Get an Audio Edit
+
+```python
+original_transcript = 'Hi, how are you?'
+target_transcript = 'Hello, how are you?'
+voice_uuid = '<voice_uuid>'
+
+with open('path/to/audio.wav', 'rb') as file:
+    response = Resemble.v2.edits.create_and_get(original_transcript, target_transcript, voice_uuid, file)
+    audio_edit = response['item']
+```
+
+## Term Substitutions
+
+### List All Term Substitutions
+
+```python
+page = 1
+page_size = 10
+
+response = Resemble.v2.term_substitutions.all(page, page_size)
+substitutions = response['items']
+```
+
+### Create a Term Substitution
+
+```python
+response = Resemble.v2.term_substitutions.create('Original', 'Replacement')
+substitutions = response['items']
+```
+
+### Delete a Term Substitution
+
+```python
+substitution_uuid = '...'
+
+response = Resemble.v2.term_substitutions.delete(substitution_uuid)
+```
+
+## Additional Resources
+
+- [Creating Clips Guide](/guides/creating-clips/python) - Step-by-step tutorial
+- [WebSocket Streaming Guide](/guides/creating-clips/websocket-streaming) - Real-time audio streaming
+- [GitHub Examples](https://github.com/resemble-ai/resemble-examples) - Sample code and projects

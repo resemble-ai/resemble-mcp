@@ -1,0 +1,46 @@
+---
+title: List Recordings
+slug: /voice-creation/recordings/list
+---
+
+`GET https://app.resemble.ai/api/v2/voices/{voice_uuid}/recordings`
+
+Retrieve a paginated list of recordings for a voice.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `voice_uuid` | string | ✅ | Voice UUID (URL parameter). |
+| `page` | integer | ❌ | Page number for pagination (query parameter). |
+| `page_size` | integer | ❌ | Number of items per page (query parameter). |
+
+```bash
+curl 'https://app.resemble.ai/api/v2/voices/VOICE_UUID/recordings?page=1&page_size=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "total_results": 10,
+  "page_count": 1,
+  "items": [
+    {
+      "uuid": "RECORDING_UUID",
+      "name": "line_01",
+      "text": "Welcome back to Resemble!",
+      "emotion": "neutral",
+      "fill": false,
+      "is_active": true,
+      "audio_src": "https://...",
+      "metrics": {
+        "signal_to_noise_ratio": 28.4,
+        "loudness_grade": "A",
+        "resemble_sample_score": 0.92
+      },
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```

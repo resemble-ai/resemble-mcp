@@ -1,0 +1,192 @@
+---
+title: Create Webhook
+slug: /agents/webhooks/create
+---
+
+Create a new webhook for an agent. Each agent can have at most one webhook of each type (pre_call and post_call).
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/agents/{agent_uuid}/webhooks
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| webhook_type | string | Yes | Webhook type: "pre_call" or "post_call" |
+| webhook_config | object | Yes | Webhook configuration (see below) |
+
+## Pre-Call Webhook Example
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/webhooks" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "webhook_type": "pre_call",
+    "webhook_config": {
+      "api_schema": {
+        "url": "https://api.example.com/pre-call",
+        "method": "POST",
+        "request_headers": {
+          "Authorization": "Bearer secret123",
+          "Content-Type": "application/json"
+        },
+        "request_body": {
+          "agent_uuid": "{{agent_uuid}}",
+          "caller_phone": "{{caller_phone}}"
+        }
+      },
+      "assignments": [
+        {
+          "source": "response",
+          "attribute_name": "customer_name",
+          "dynamic_variable": "customer_name"
+        },
+        {
+          "source": "response",
+          "attribute_name": "account_balance",
+          "dynamic_variable": "balance"
+        }
+      ],
+      "response_timeout_secs": 10
+    }
+  }'
+```
+
+## Post-Call Webhook Example
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/webhooks" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "webhook_type": "post_call",
+    "webhook_config": {
+      "api_schema": {
+        "url": "https://api.example.com/post-call",
+        "method": "POST",
+        "request_headers": {
+          "Authorization": "Bearer secret123"
+        },
+        "request_body": {
+          "conversation_uuid": "{{conversation_uuid}}",
+          "duration_seconds": "{{call_duration}}",
+          "summary": "{{call_summary}}"
+        }
+      },
+      "response_timeout_secs": 5
+    }
+  }'
+```
+
+## Pre-Call Webhook Configuration
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| api_schema | object | Yes | API endpoint configuration |
+| assignments | array | Yes | Variable assignments from webhook response |
+| response_timeout_secs | integer | No | Timeout in seconds |
+
+### API Schema
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| url | string | Yes | HTTP/HTTPS URL |
+| method | string | Yes | HTTP method (typically POST) |
+| request_headers | object | No | HTTP headers |
+| request_body | object | No | Request body |
+
+### Assignments
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| source | string | Yes | Must be "response" for pre-call webhooks |
+| attribute_name | string | Yes | Field name in webhook response |
+| dynamic_variable | string | Yes | Target dynamic variable (must exist in agent) |
+
+## Post-Call Webhook Configuration
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| api_schema | object | Yes | API endpoint configuration |
+| response_timeout_secs | integer | No | Timeout in seconds |
+
+> **Note**: Post-call webhooks do not support assignments (no variables are updated after call ends).
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "id": 1,
+    "webhook_type": "pre_call",
+    "webhook_config": {
+      "api_schema": {
+        "url": "https://api.example.com/pre-call",
+        "method": "POST",
+        "request_headers": {
+          "Authorization": "Bearer secret123",
+          "Content-Type": "application/json"
+        },
+        "request_body": {
+          "agent_uuid": "{{agent_uuid}}",
+          "caller_phone": "{{caller_phone}}"
+        }
+      },
+      "assignments": [
+        {
+          "source": "response",
+          "attribute_name": "customer_name",
+          "dynamic_variable": "customer_name"
+        }
+      ],
+      "response_timeout_secs": 10
+    },
+    "created_at": "2025-01-27T10:00:00Z",
+    "updated_at": "2025-01-27T10:00:00Z"
+  },
+  "message": "Webhook created successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "webhook_type": ["must be one of: pre_call, post_call"],
+    "webhook_config": [
+      "missing required fields: api_schema",
+      "assignments[0].source must be 'response' for pre_call webhooks",
+      "assignments[0].dynamic_variable 'customer_name' does not exist in agent's dynamic_variables"
+    ]
+  },
+  "message": "Failed to create webhook"
+}
+```
+
+## Validation Rules
+
+- **webhook_type**: Required, must be "pre_call" or "post_call"
+- **webhook_config**: Required
+- **Uniqueness**: Only one webhook of each type per agent
+- **Pre-call assignments[].source**: Must be "response"
+- **Pre-call assignments[].dynamic_variable**: Must exist in agent's dynamic_variables
+- **Post-call**: No assignments field
+
+## See Also
+
+- [Agent Webhooks Overview](/agents/webhooks/overview) - Learn about webhook types
+- [Update Webhook](/agents/webhooks/update) - Modify existing webhooks
+- [Delete Webhook](/agents/webhooks/delete) - Remove webhooks

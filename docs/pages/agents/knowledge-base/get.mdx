@@ -1,0 +1,146 @@
+---
+title: Get Knowledge Item
+slug: /agents/knowledge-base/get
+---
+
+Retrieves a single knowledge item with detailed information including attached agents.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/knowledge_items/{uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The UUID of the knowledge item |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/knowledge_items/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (URL Type)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Product FAQ",
+    "description": "FAQ content",
+    "source_type": "url",
+    "status": "ready",
+    "error_message": null,
+    "chunk_count": 15,
+    "url": "https://example.com/faq",
+    "agents": [
+      {
+        "uuid": "agent-uuid-1",
+        "name": "Support Agent"
+      },
+      {
+        "uuid": "agent-uuid-2",
+        "name": "Sales Agent"
+      }
+    ],
+    "created_at": "2025-12-01T10:00:00Z",
+    "updated_at": "2025-12-01T10:05:00Z"
+  }
+}
+```
+
+## Response (Document Type)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "660e8400-e29b-41d4-a716-446655440001",
+    "title": "Product Manual",
+    "description": "Complete product documentation",
+    "source_type": "document",
+    "status": "ready",
+    "error_message": null,
+    "chunk_count": 42,
+    "document_url": "https://storage.example.com/signed-url",
+    "document_filename": "manual.pdf",
+    "agents": [
+      {
+        "uuid": "agent-uuid-1",
+        "name": "Support Agent"
+      }
+    ],
+    "created_at": "2025-12-01T09:00:00Z",
+    "updated_at": "2025-12-01T09:15:00Z"
+  }
+}
+```
+
+## Response (Failed Status)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "770e8400-e29b-41d4-a716-446655440002",
+    "title": "Invalid Document",
+    "description": "Test document",
+    "source_type": "document",
+    "status": "failed",
+    "error_message": "Failed to extract text from PDF: file is corrupted",
+    "chunk_count": null,
+    "document_url": "https://storage.example.com/signed-url",
+    "document_filename": "test.pdf",
+    "agents": [],
+    "created_at": "2025-12-01T08:00:00Z",
+    "updated_at": "2025-12-01T08:02:00Z"
+  }
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| item | object | Knowledge item object |
+| uuid | string | Unique identifier |
+| title | string | Display title (max 50 chars) |
+| description | string | Description (max 200 chars) |
+| source_type | string | Source type: `document`, `url`, or `text` |
+| status | string | Status: `pending`, `processing`, `ready`, or `failed` |
+| error_message | string | Error details if status is `failed` (null otherwise) |
+| chunk_count | integer | Number of chunks created (null until processed) |
+| url | string | Source URL (only for `url` type) |
+| document_url | string | Signed URL to download document (only for `document` type, expires after 1 hour) |
+| document_filename | string | Original filename (only for `document` type) |
+| agents | array | Array of agents using this knowledge item |
+| agents[].uuid | string | Agent UUID |
+| agents[].name | string | Agent name |
+| created_at | string | ISO8601 timestamp of creation |
+| updated_at | string | ISO8601 timestamp of last update |
+
+## Error Response (Not Found)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Knowledge item not found"]
+  },
+  "message": "Failed to retrieve knowledge item"
+}
+```
+
+## Use Cases
+
+- **Check Processing Status**: Poll this endpoint to monitor ingestion progress
+- **View Attached Agents**: See which agents are using this knowledge item
+- **Download Documents**: Use the signed `document_url` to download PDF files
+- **Debugging Failures**: Read `error_message` when status is `failed`

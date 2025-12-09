@@ -1,0 +1,107 @@
+---
+title: Get Agent
+slug: /agents/get
+---
+
+Retrieve a specific agent by UUID.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/{uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The unique identifier of the agent |
+
+## Query Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| advanced | boolean | Include detailed configuration (default: false) |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Example Request with Advanced Mode
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000?advanced=true" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "agent": {
+      "name": "Customer Support Agent",
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "languages": ["en-US"],
+      "dynamic_variables": {
+        "customer_name": "John Doe"
+      },
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-20T14:45:00Z",
+      "last_active_at": null,
+      "calls_today": 0,
+      "status": "inactive"
+    },
+    "asr": {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "user_input_audio_format": "pcm_16000",
+      "keywords": []
+    },
+    "tts": {
+      "voice_uuid": "abc123",
+      "voice_name": "Professional Voice"
+    },
+    "turn": {
+      "turn_timeout": 7,
+      "silence_end_call_timeout": -1,
+      "mode": "silence"
+    },
+    "llm": {
+      "prompt": "You are a helpful assistant.",
+      "provider": "openai",
+      "model": "gpt-4o",
+      "reasoning_effort": null,
+      "temperature": 0.3,
+      "timezone": null,
+      "built_in_tools": {}
+    },
+    "phone_numbers": [],
+    "tools_count": 2,
+    "webhooks_count": 1
+  }
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| item | object | Agent object with full configuration |
+| agent | object | Core agent information |
+| asr | object | ASR configuration |
+| tts | object | TTS configuration |
+| turn | object | Turn-taking configuration |
+| llm | object | LLM configuration |
+| phone_numbers | array | Linked phone numbers |
+| tools_count | integer | Number of tools (basic mode) |
+| webhooks_count | integer | Number of webhooks (basic mode) |
+
+In advanced mode, `tools_count` and `webhooks_count` are replaced with full `tools`, `knowledge_bases`, and `webhooks` arrays.

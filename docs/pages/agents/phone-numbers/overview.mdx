@@ -1,0 +1,114 @@
+---
+title: Phone Numbers
+slug: /agents/phone-numbers/overview
+---
+
+Phone numbers enable voice agents to receive and make calls. Each phone number can be linked to one agent and supports both inbound and outbound calling through Twilio integration.
+
+## Key Features
+
+### Inbound Calling
+
+- Receive calls on your agent's phone number
+- Automatic agent dispatch when calls arrive
+- Configurable SIP trunk settings
+- Connection policy management
+
+### Outbound Calling
+
+- Make calls programmatically from your agent
+- Twilio trunk integration
+- Credential management for authentication
+- Custom SIP headers support
+
+### Automatic Twilio Setup
+
+When you create a phone number with Twilio credentials, the system automatically:
+
+1. Creates SIP trunk in Twilio
+2. Configures origination URLs for inbound (if `supports_inbound: true`)
+3. Creates credential lists for outbound (if `supports_outbound: true`)
+4. Sets up connection policies for inbound routing
+5. Configures LiveKit integration for real-time communication
+
+### Rollback Protection
+
+If any setup step fails, all external resources are automatically cleaned up to prevent orphaned configurations in Twilio.
+
+## Phone Number States
+
+| Status | Description |
+| --- | --- |
+| active | Phone number is operational and ready to use |
+| corrupted | Cleanup failed during deletion; requires manual intervention |
+| deleting | Phone number is in the process of being deleted |
+
+## Linking to Agents
+
+- Each phone number can be linked to **one agent at a time**
+- Link during agent creation via `phone_number_id` parameter
+- Link during phone number creation if agent exists
+- Update agent to change linked phone number
+- Unlinking happens automatically when phone number is deleted
+
+## Provider Support
+
+Currently supported providers:
+
+| Provider | Inbound | Outbound | Notes |
+| --- | --- | --- | --- |
+| twilio | ✅ Yes | ✅ Yes | Full SIP trunk automation |
+
+## Available Operations
+
+- [List Phone Numbers](/agents/phone-numbers/list) - Retrieve all phone numbers
+- [Get Phone Number](/agents/phone-numbers/get) - Get a specific phone number
+- [Create Phone Number](/agents/phone-numbers/create) - Add a new phone number
+- [Delete Phone Number](/agents/phone-numbers/delete) - Remove a phone number
+- [Force Delete Phone Number](/agents/phone-numbers/force-delete) - Force delete corrupted phone numbers
+
+## Common Workflows
+
+### Setting Up Inbound Calling
+
+1. Create a phone number with `supports_inbound: true`
+2. Provide Twilio credentials
+3. Link to an agent (during creation or via agent update)
+4. System automatically configures Twilio trunk and LiveKit integration
+5. Agent receives calls automatically
+
+### Setting Up Outbound Calling
+
+1. Create a phone number with `supports_outbound: true`
+2. Provide Twilio credentials
+3. Link to an agent
+4. System automatically configures outbound trunk with credentials
+5. Agent can make outbound calls programmatically
+
+### Handling Cleanup Failures
+
+If phone number deletion fails:
+
+1. Phone number is marked as `corrupted`
+2. Review error message for cleanup instructions
+3. Manually clean up external resources (Twilio)
+4. Use [Force Delete](/agents/phone-numbers/force-delete) to remove database record
+
+## E.164 Format
+
+All phone numbers should use E.164 format:
+
+```
++[country code][subscriber number]
+```
+
+Examples:
+- US: `+14155551234`
+- UK: `+442071838750`
+- Australia: `+61212345678`
+
+## See Also
+
+- [Agents Overview](/agents/overview) - Learn about voice agents
+- [Create Agent](/agents/create) - Link phone numbers during agent creation
+- [Update Agent](/agents/update) - Change linked phone numbers

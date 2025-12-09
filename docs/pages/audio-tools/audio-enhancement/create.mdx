@@ -1,0 +1,36 @@
+---
+title: Create Audio Enhancement
+slug: /audio-tools/audio-enhancement/create
+---
+
+`POST https://app.resemble.ai/api/v2/audio_enhancements`
+
+Create a new audio enhancement job to improve audio quality.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `audio_file` | file | ✅ | Audio file to enhance (WAV, MP3, M4A, MP4, OGG, AAC, FLAC). |
+| `loudness_target_level` | number | ❌ | Target loudness level in LUFS. |
+| `loudness_peak_limit` | number | ❌ | Peak loudness limit in dB. |
+| `enhancement_level` | number | ❌ | Enhancement intensity level. |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/audio_enhancements' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'audio_file=@your_audio_file.mp3' \
+  -F 'enhancement_level=0.8' \
+  -F 'loudness_target_level=-14' \
+  -F 'loudness_peak_limit=-3'
+```
+
+```json
+{
+  "success": true,
+  "uuid": "ENHANCEMENT_UUID",
+  "status": "pending"
+}
+```
+
+<Note>
+Maximum file size: 150 MB. Allowed formats: WAV, MP3, M4A, MP4, OGG, AAC, FLAC. Processing is asynchronous. Returns 202 Accepted status.
+</Note>

@@ -1,0 +1,20 @@
+---
+title: Getting Started
+slug: /guides/creating-clips/websocket-streaming/getting-started
+---
+
+The WebSocket API delivers low-latency text-to-speech streaming. Use it when you need immediate playback, conversational agents, or continuous audio synthesis.
+
+## Key Features
+
+- **Real-time audio** – Receive PCM or MP3 chunks as they are generated.
+- **Flexible payloads** – Choose JSON frames (base64) or raw binary streams.
+- **Connection-aware errors** – Separate recoverable synthesis errors from unrecoverable connection failures.
+
+Before you stream:
+
+1. Confirm your account has Business-plan WebSocket access.
+2. Retrieve your API token (`Authorization: Bearer ...`).
+3. Select an eligible `voice_uuid`.
+
+Continue with [Receiving Audio](./receiving-audio) for request parameters and response shapes.

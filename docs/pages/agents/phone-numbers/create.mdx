@@ -1,0 +1,151 @@
+---
+title: Create Phone Number
+slug: /agents/phone-numbers/create
+---
+
+Create a new phone number. If using Twilio as the provider, this will automatically configure the necessary trunk infrastructure.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/phone_numbers
+```
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| phone_number | string | Yes | E.164 formatted phone number |
+| label | string | Yes | Human-readable label for the phone number |
+| supports_inbound | boolean | No | Enable inbound calls (default: false) |
+| supports_outbound | boolean | No | Enable outbound calls (default: false) |
+| provider | string | No | Provider: "twilio" |
+| twilio_account_sid | string | Conditional | Required if provider is "twilio" |
+| twilio_auth_token | string | Conditional | Required if provider is "twilio" |
+| outbound_trunk | object | No | Manual outbound trunk configuration |
+| inbound_trunk | object | No | Manual inbound trunk configuration |
+
+### Outbound Trunk Configuration (Optional)
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| address | string | - | SIP trunk address |
+| transport | string | "auto" | Transport protocol: "auto", "udp", "tcp", "tls" |
+| media_encryption | string | "disabled" | Media encryption: "disabled", "allowed", "required" |
+| has_auth_credentials | boolean | false | Whether authentication is required |
+| username | string | - | SIP username for authentication |
+| headers | object | {} | Custom SIP headers |
+
+### Inbound Trunk Configuration (Optional)
+
+| Attribute | Type | Default | Description |
+| --- | --- | --- | --- |
+| allowed_addresses | array | [] | Array of allowed IP addresses |
+| allowed_numbers | array | [] | Array of allowed phone numbers |
+| media_encryption | string | "disabled" | Media encryption: "disabled", "allowed", "required" |
+| has_auth_credentials | boolean | false | Whether authentication is required |
+| username | string | - | SIP username for authentication |
+
+## Example Request
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/phone_numbers" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "phone_number": "+14155551234",
+    "label": "Support Line",
+    "supports_inbound": true,
+    "supports_outbound": false,
+    "provider": "twilio",
+    "twilio_account_sid": "AC...",
+    "twilio_auth_token": "your_auth_token"
+  }'
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "id": 1,
+    "phone_number": "+14155551234",
+    "label": "Support Line",
+    "supports_inbound": true,
+    "supports_outbound": false,
+    "provider": "twilio",
+    "status": "active",
+    "agent_id": null,
+    "agent_name": null,
+    "agent_uuid": null,
+    "outbound_trunk": {},
+    "inbound_trunk": {
+      "twilio_trunk_sid": "TK...",
+      "domain_name": "example.pstn.twilio.com",
+      "configured": true,
+      "configured_at": "2025-01-27T10:00:00Z",
+      "livekit_trunk_id": "TR_...",
+      "livekit_dispatch_rule_id": "DR_...",
+      "livekit_configured": true,
+      "livekit_configured_at": "2025-01-27T10:00:00Z"
+    },
+    "twilio_account_sid": "AC...",
+    "has_twilio_credentials": true,
+    "created_at": "2025-01-27T10:00:00Z",
+    "updated_at": "2025-01-27T10:00:00Z"
+  },
+  "message": "Phone number created successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "phone_number": ["is already in use"],
+    "label": ["can't be blank"],
+    "provider": ["Invalid provider. Must be one of: twilio"],
+    "twilio_credentials": ["Twilio Account SID and Auth Token are required when provider is Twilio"],
+    "twilio_trunk": ["Failed to create Twilio trunk: Invalid credentials"]
+  },
+  "message": "Failed to create phone number"
+}
+```
+
+## Validation Rules
+
+- **phone_number**: Required, must be unique across the platform, E.164 format recommended
+- **label**: Required, cannot be empty
+- **provider**: Must be "twilio" (currently only supported provider)
+- **twilio_account_sid**: Required when provider is "twilio"
+- **twilio_auth_token**: Required when provider is "twilio"
+- **outbound_trunk.transport**: Must be one of: "auto", "udp", "tcp", "tls"
+- **outbound_trunk.media_encryption**: Must be one of: "disabled", "allowed", "required"
+- **inbound_trunk.media_encryption**: Must be one of: "disabled", "allowed", "required"
+- **inbound_trunk.allowed_addresses**: Must be array of strings
+- **inbound_trunk.allowed_numbers**: Must be array of strings
+
+## Automatic Twilio Setup
+
+When you create a phone number with Twilio provider and credentials:
+
+1. **Twilio Trunk Setup** (automatic):
+   - Creates SIP trunk in Twilio
+   - Configures origination URLs for inbound (if `supports_inbound: true`)
+   - Creates credential lists for outbound (if `supports_outbound: true`)
+   - Sets up connection policies for inbound routing
+
+2. **Rollback on Failure**:
+   - If any setup step fails, all external resources are automatically cleaned up
+   - No orphaned resources are left in Twilio
+   - Detailed error messages guide you to resolution
+
+## Important Notes
+
+- Phone numbers **cannot be updated** after creation
+- If you need to make changes, delete and recreate the phone number
+- Twilio credentials are securely stored and never returned in API responses
+- The `has_twilio_credentials` flag indicates whether credentials are configured

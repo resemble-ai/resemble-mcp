@@ -1,0 +1,22 @@
+---
+title: Audio Enhancement
+slug: /audio-tools/audio-enhancement
+---
+
+Improve raw recordings by normalizing loudness, enforcing peak ceilings, and reducing noise.
+
+## Workflow
+
+1. Create an enhancement job with your audio file and optional parameters.
+2. Poll for completion using the returned UUID.
+3. Download the enhanced audio when ready.
+
+## Parameters
+
+| Parameter | Range | Default | Description |
+| --- | --- | --- | --- |
+| `enhancement_level` | `0.0` – `1.0` | `1.0` | Intensity of processing. Lower values apply lighter touch. |
+| `loudness_target_level` | `-70` – `-5` LUFS | `-14` | Desired integrated loudness. |
+| `loudness_peak_limit` | `-9` – `0` dBTP | `-1` | Maximum permitted peak. Lower values add headroom. |
+
+Tune these values to match your distribution requirements (e.g., streaming platforms typically target -14 LUFS with -1 dBTP ceiling).

@@ -1,0 +1,51 @@
+---
+title: Getting Started
+slug: /guides/prompt-generation/getting-started
+---
+
+Use the `prompt` attribute on the SSML `<speak>` tag to change delivery without creating a new voice. Prompts let you steer style, emotion, and context dynamically at synthesis time.
+
+## What Prompts Can Do
+
+- Shift speaking style (casual, formal, storyteller)
+- Set emotion (excited, calm, sympathetic)
+- Provide context (news reader, sports announcer, meditation guide)
+- Personalize delivery for each request while reusing the same `voice_uuid`
+
+## How It Works
+
+```xml
+<speak prompt="Speak this like an excited sports announcer">
+  The home team just scored the winning goal in the final seconds!
+</speak>
+```
+
+The prompt text guides the synthesis model just before it renders the clip. Combine prompts with other SSML features such as `<prosody>` or `<break>` for fine-grained control.
+
+### More Prompt Examples
+
+```xml
+<speak prompt="Speak in a calm, soothing voice">
+  Welcome to your guided meditation session. Let's begin by taking a deep breath.
+</speak>
+```
+
+```xml
+<speak prompt="You are a knowledgeable science educator explaining complex concepts in an engaging way">
+  Black holes form when massive stars collapse at the end of their life cycle.
+</speak>
+```
+
+```xml
+<speak prompt="Speak with excitement and enthusiasm, like you're sharing amazing news">
+  We've just received confirmation that our project has been approved with full funding!
+</speak>
+```
+
+### Best Practices
+
+- Keep prompts concise and descriptive.
+- Use natural language as if you were coaching a voice actor.
+- Experiment—minor wording tweaks can produce noticeably different results.
+
+Continue to [Generate Audio](./generate-audio) for a full example request.

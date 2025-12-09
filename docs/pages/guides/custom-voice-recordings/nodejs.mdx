@@ -1,0 +1,158 @@
+---
+title: Node.js Workflow
+slug: /guides/custom-voice-recordings/nodejs
+---
+
+Upload individual recordings, attach them to a voice, then trigger a build.
+
+## Prerequisites
+
+- Node.js 18+
+- PRO plan (or higher) account and API token (`RESEMBLE_API_KEY`)
+- Folder with paired `.wav` files and transcripts (`clip-01.wav`, `clip-01.txt`, ...)
+
+```bash
+npm init -y
+npm install @resemble/node
+```
+
+## 1. Bootstrap the script
+
+```ts
+// resemble-clone-voice-recording/index.js
+import * as Resemble from "@resemble/node";
+import fs from "fs";
+import path from "path";
+
+const apiKey = process.env.RESEMBLE_API_KEY;
+if (!apiKey) {
+  console.error("Set RESEMBLE_API_KEY before running.");
+  process.exit(1);
+}
+
+Resemble.Resemble.setApiKey(apiKey);
+
+const args = process.argv.slice(2);
+if (args.length !== 2) {
+  console.error("Usage: node index.js <voice_name> <recordings_folder>");
+  process.exit(1);
+}
+
+const [voiceName, recordingsFolder] = args;
+```
+
+## 2. Create the voice
+
+```ts
+async function createVoice(name) {
+  console.log(`Creating voice ${name}...`);
+  const response = await Resemble.Resemble.v2.voices.create({ name });
+
+  if (!response.success) {
+    throw new Error(JSON.stringify(response));
+  }
+
+  const voice = response.item;
+  console.log(`Voice UUID: ${voice.uuid} (status: ${voice.status})`);
+  return voice.uuid;
+}
+```
+
+## 3. Read recordings from disk
+
+```ts
+function readFolder(folderPath) {
+  const entries = [];
+
+  fs.readdirSync(folderPath).forEach((filename) => {
+    if (!filename.endsWith(".wav")) return;
+
+    const transcriptFile = filename.replace(".wav", ".txt");
+    const transcriptPath = path.join(folderPath, transcriptFile);
+
+    if (!fs.existsSync(transcriptPath)) {
+      console.warn(`Skipping ${filename}; missing transcript.`);
+      return;
+    }
+
+    entries.push({
+      filePath: path.join(folderPath, filename),
+      name: transcriptFile,
+      text: fs.readFileSync(transcriptPath, "utf-8"),
+    });
+  });
+
+  return entries;
+}
+```
+
+Target at least 20 clean samples; recordings longer than 12 seconds are ignored during training.
+
+## 4. Upload recordings
+
+```ts
+async function uploadRecordings(voiceUuid, folderPath) {
+  const recordings = readFolder(folderPath);
+  let success = 0;
+
+  for (const recording of recordings) {
+    console.log(`Uploading ${recording.name}...`);
+    const file = fs.createReadStream(recording.filePath);
+    const size = fs.statSync(recording.filePath).size;
+
+    const response = await Resemble.Resemble.v2.recordings.create(
+      voiceUuid,
+      {
+        emotion: "neutral",
+        is_active: true,
+        name: recording.name,
+        text: recording.text,
+      },
+      file,
+      size,
+    );
+
+    if (response.success) {
+      success += 1;
+    } else {
+      console.error(`Failed to upload ${recording.name}`, response);
+    }
+  }
+
+  console.log(`Uploaded ${success}/${recordings.length} recordings.`);
+}
+```
+
+## 5. Trigger the build
+
+```ts
+async function triggerVoiceBuild(voiceUuid) {
+  const response = await Resemble.Resemble.v2.voices.build(voiceUuid);
+  if (!response.success) {
+    throw new Error(`Failed to start build: ${JSON.stringify(response)}`);
+  }
+
+  console.log("Build request accepted. Monitor status in the dashboard or via the API.");
+}
+```
+
+## 6. Run everything
+
+```ts
+async function main() {
+  const voiceUuid = await createVoice(voiceName);
+  await uploadRecordings(voiceUuid, recordingsFolder);
+  await triggerVoiceBuild(voiceUuid);
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+```bash
+RESEMBLE_API_KEY=... node index.js "My Voice" ./example-data
+```
+
+The script prints upload status and kicks off training. Check progress with [List Voices](/voice-creation/voices/list) or the Resemble dashboard.

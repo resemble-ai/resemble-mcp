@@ -1,0 +1,90 @@
+---
+title: Speech-to-Speech
+slug: /voice-generation/speech-to-speech
+---
+
+Convert a donor recording into a target voice while preserving delivery and timing. Speech-to-speech uses the same synthesis endpoint as synchronous TTS, but you pass SSML that references a source recording.
+
+## Quick Example
+
+```bash
+curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "voice_uuid": "55592656",
+    "data": "<resemble:convert src=\"https://storage.googleapis.com/resemble-ai-docs-public-files/sts-donor-example.wav\"></resemble:convert>",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+## Endpoint
+
+`POST https://f.cluster.resemble.ai/synthesize`
+
+### Request Body
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `voice_uuid` | string | Target Resemble voice. |
+| `project_uuid` | string | Optional project to store the output clip. |
+| `title` | string | Optional clip title. |
+| `data` | string | SSML containing `<resemble:convert>` with a WAV `src` URL (≤ 50 MB, ≤ 5 minutes). |
+| `precision` | string | `MULAW`, `PCM_16`, `PCM_24`, or `PCM_32` (default). |
+| `output_format` | string | `wav` (default) or `mp3`. |
+| `sample_rate` | number | `8000`, `16000`, `22050`, `32000`, or `44100`. |
+
+### Response
+
+Identical to synchronous TTS responses:
+
+```json
+{
+  "audio_content": "<base64>",
+  "audio_timestamps": {
+    "graph_chars": ["H", "i"],
+    "graph_times": [[0.03, 0.14], ...],
+    "phon_chars": ["HH", "AY"],
+    "phon_times": [[0.03, 0.14], ...]
+  },
+  "duration": 4.02,
+  "success": true,
+  "output_format": "wav"
+}
+```
+
+### `<resemble:convert>` Attributes
+
+| Attribute | Description |
+| --- | --- |
+| `src` | HTTPS URL pointing to a WAV file with a single speaker. Files over 50 MB or 300 seconds are trimmed. |
+| `pitch` | Optional float `-10.0` – `10.0` to transpose the donor. |
+| `prompt` | Optional primer text to steer delivery (e.g. `"Speak in a British accent."`). **Note:** For STS, place `prompt` on the `<resemble:convert>` tag, not on `<speak>`. |
+
+> **Tip:** Store donor files in cloud storage with signed URLs and revoke them after synthesis completes.
+
+## Prompting with Speech-to-Speech
+
+You can use the `prompt` attribute to guide how the donor audio is converted to the target voice. Unlike text-to-speech where the `prompt` is placed on the `<speak>` root element, for speech-to-speech conversion you must place the `prompt` attribute directly on the `<resemble:convert>` tag.
+
+### Example with Prompt
+
+```bash
+curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "voice_uuid": "55592656",
+    "data": "<speak><resemble:convert src=\"https://storage.googleapis.com/resemble-ai-docs-public-files/sts-donor-example.wav\" prompt=\"Speak in a British accent.\"></resemble:convert></speak>",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+The `prompt` attribute allows you to adjust:
+- Accent or dialect (e.g. "Speak in a British accent")
+- Tone or emotion (e.g. "Speak with excitement")
+- Speaking style (e.g. "Speak in a formal tone")
+
+This provides fine-grained control over how the donor audio's delivery is transformed while maintaining the original timing and prosody.

@@ -1,0 +1,142 @@
+---
+title: Agents
+slug: /agents/overview
+---
+
+The Agents API provides a comprehensive interface for creating and managing voice AI agents on the Resemble AI platform. Voice agents combine automatic speech recognition (ASR), text-to-speech (TTS), large language models (LLM), and turn-taking capabilities to power interactive voice conversations.
+
+## What are Voice Agents?
+
+Voice agents are AI-powered conversational systems that can:
+
+- **Listen**: Use ASR to transcribe user speech in real-time
+- **Think**: Process conversations using LLMs with custom prompts and tools
+- **Speak**: Generate natural responses using Resemble's TTS voices
+- **Take Turns**: Manage conversation flow with intelligent turn-taking
+
+## Key Features
+
+### Configurable Components
+
+Each agent consists of four main components:
+
+- **ASR Configuration**: Speech recognition settings including provider, model, and audio format
+- **TTS Configuration**: Voice selection for speech synthesis
+- **LLM Configuration**: Language model settings including prompt, provider, model, and temperature
+- **Turn Configuration**: Conversation flow settings including timeouts and detection modes
+
+### Dynamic Variables
+
+Agents support dynamic variables for runtime context:
+
+- Populate variables via pre-call webhooks
+- Reference variables in prompts and tools using `{{variable_name}}` syntax
+- Update variables during conversations using tool assignments
+- Maximum 64 characters for keys, 2048 characters for values
+
+### Extensibility
+
+Extend agent capabilities with:
+
+- **Webhook Tools**: Call external APIs during conversations
+- **Client Tools**: Trigger client-side actions
+- **System Tools**: Use platform-provided functionality (end call, transfer, voicemail detection)
+- **Knowledge Base**: Enable RAG (Retrieval Augmented Generation) for context-aware responses
+- **Pre-Call Webhooks**: Fetch data before conversations start
+- **Post-Call Webhooks**: Log analytics after conversations end
+
+### Phone Integration
+
+Connect agents to phone numbers for:
+
+- **Inbound Calls**: Answer incoming calls automatically
+- **Outbound Calls**: Make calls programmatically
+- **Twilio Integration**: Automatic trunk configuration and management
+
+## Getting Started
+
+To create a voice agent, you'll need:
+
+1. A Resemble voice (get via [Voices API](/manage/voices/overview))
+2. An API token for authentication
+3. Optionally, a phone number for inbound/outbound calling
+
+## API Resources
+
+The Agents API is organized into five main resource types:
+
+### Agents
+
+Core agent management including creation, configuration, and lifecycle operations.
+
+- [List Agents](/agents/list)
+- [Get Agent](/agents/get)
+- [Create Agent](/agents/create)
+- [Update Agent](/agents/update)
+- [Delete Agent](/agents/delete)
+- [Dispatch Agent](/agents/dispatch)
+- [Get Capabilities](/agents/capabilities)
+- [Get System Tools](/agents/system-tools)
+
+### Phone Numbers
+
+Manage phone numbers for inbound and outbound calling.
+
+- [Phone Numbers Overview](/agents/phone-numbers/overview)
+- [List Phone Numbers](/agents/phone-numbers/list)
+- [Get Phone Number](/agents/phone-numbers/get)
+- [Create Phone Number](/agents/phone-numbers/create)
+- [Delete Phone Number](/agents/phone-numbers/delete)
+- [Force Delete Phone Number](/agents/phone-numbers/force-delete)
+
+### Agent Tools
+
+Configure tools that extend agent capabilities.
+
+- [Agent Tools Overview](/agents/tools/overview)
+- [List Tools](/agents/tools/list)
+- [Get Tool](/agents/tools/get)
+- [Create Tool](/agents/tools/create)
+- [Update Tool](/agents/tools/update)
+- [Delete Tool](/agents/tools/delete)
+
+### Agent Webhooks
+
+Set up webhooks for pre-call and post-call integrations.
+
+- [Agent Webhooks Overview](/agents/webhooks/overview)
+- [List Webhooks](/agents/webhooks/list)
+- [Get Webhook](/agents/webhooks/get)
+- [Create Webhook](/agents/webhooks/create)
+- [Update Webhook](/agents/webhooks/update)
+- [Delete Webhook](/agents/webhooks/delete)
+
+### Agent Knowledge Base
+
+Enable RAG support by attaching knowledge items to agents.
+
+- [Agent Knowledge Base Overview](/agents/knowledge-base/overview)
+- [List Knowledge Items](/agents/knowledge-base/list)
+- [Get Knowledge Item](/agents/knowledge-base/get)
+- [Create Knowledge Item](/agents/knowledge-base/create)
+- [Delete Knowledge Item](/agents/knowledge-base/delete)
+- [Re-ingest Knowledge Item](/agents/knowledge-base/reingest)
+- [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items)
+- [Attach Knowledge Item to Agent](/agents/knowledge-base/attach)
+- [Detach Knowledge Item from Agent](/agents/knowledge-base/detach)
+
+## Base URL
+
+```
+https://app.resemble.ai/api/v2
+```
+
+## Authentication
+
+All requests require Bearer token authentication using your API key:
+
+```bash
+Authorization: Bearer YOUR_API_TOKEN
+```
+
+Get your API key from [https://app.resemble.ai/account/api](https://app.resemble.ai/account/api)

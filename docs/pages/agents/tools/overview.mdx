@@ -1,0 +1,183 @@
+---
+title: Agent Tools
+slug: /agents/tools/overview
+---
+
+Tools extend agent capabilities by allowing them to call external APIs (webhook tools), trigger client-side actions (client tools), or use platform-provided functionality (system tools).
+
+## Tool Types
+
+### Webhook Tools
+
+Call external HTTP APIs during conversations.
+
+**Use Cases**:
+- Check inventory availability
+- Fetch customer data from CRM
+- Process payments
+- Update databases
+- Trigger notifications
+
+**Features**:
+- Full HTTP method support (GET, POST, PUT, PATCH, DELETE)
+- Custom headers and request bodies
+- Template variable substitution with `{{variable_name}}`
+- Response data extraction and assignment to dynamic variables
+- Configurable timeouts (1-60 seconds)
+
+### Client Tools
+
+Trigger client-side actions in your application.
+
+**Use Cases**:
+- Display product information
+- Show images or videos
+- Update UI components
+- Navigate to different screens
+- Collect user input
+
+**Features**:
+- Parameter passing to client application
+- Dynamic variable assignment from arguments
+- Custom return messages
+- Interruption control
+
+### System Tools
+
+Platform-provided tools for common operations.
+
+**Available System Tools**:
+- **end_call**: End the current phone call
+- **transfer_to_number**: Transfer call to another number
+- **voicemail_detection**: Detect if call reached voicemail
+
+**Features**:
+- Automatically created for each agent
+- Cannot be manually created or deleted
+- Can be enabled/disabled and configured
+- See [Get System Tools](/agents/system-tools) for details
+
+## Tool Configuration
+
+### Parameters
+
+Define what information the LLM should collect before using the tool:
+
+```json
+{
+  "parameters": {
+    "location": {
+      "type": "string",
+      "description": "City name to check weather for"
+    },
+    "units": {
+      "type": "string",
+      "description": "Temperature units: celsius or fahrenheit"
+    }
+  }
+}
+```
+
+### Assignments
+
+Extract data from tool responses and assign to dynamic variables:
+
+```json
+{
+  "assignments": [
+    {
+      "source": "response",
+      "attribute_name": "temperature",
+      "dynamic_variable": "current_temp"
+    }
+  ]
+}
+```
+
+**Sources**:
+- `response`: Extract from webhook HTTP response
+- `argument`: Extract from tool arguments (client tools only)
+
+### Behavior Control
+
+Control how tools execute:
+
+| Setting | Type | Description |
+| --- | --- | --- |
+| active | boolean | Enable/disable the tool |
+| disable_interruptions | boolean | Prevent user interruptions during tool use |
+| force_pre_tool_speech | boolean | Force agent to speak before using tool |
+| return_message | string | Message to return after execution (client tools) |
+| response_timeout_secs | integer | Timeout for webhook calls (1-60 seconds) |
+
+## Template Variables
+
+Use `{{variable_name}}` syntax to inject dynamic values:
+
+**Available in**:
+- Webhook URLs
+- Request headers
+- Request bodies
+
+**Variable Sources**:
+- Tool parameters (defined in the tool)
+- Agent dynamic variables
+- Built-in variables (e.g., `{{agent_uuid}}`, `{{conversation_uuid}}`)
+
+**Example**:
+```json
+{
+  "api_schema": {
+    "url": "https://api.example.com/customers/{{customer_id}}",
+    "request_headers": {
+      "Authorization": "Bearer {{api_key}}"
+    }
+  }
+}
+```
+
+## Available Operations
+
+- [List Tools](/agents/tools/list) - Retrieve all tools for an agent
+- [Get Tool](/agents/tools/get) - Get a specific tool
+- [Create Tool](/agents/tools/create) - Add a new webhook or client tool
+- [Update Tool](/agents/tools/update) - Modify tool configuration
+- [Delete Tool](/agents/tools/delete) - Remove a tool
+
+## Common Workflows
+
+### Creating a Webhook Tool
+
+1. Define the external API endpoint
+2. Specify parameters the LLM should collect
+3. Configure request headers/body with template variables
+4. Set up assignments to extract response data
+5. Configure timeout and behavior settings
+
+### Creating a Client Tool
+
+1. Define parameters for the client action
+2. Set up assignments to pass data to dynamic variables
+3. Configure return message
+4. Set interruption and speech behavior
+
+### Updating System Tools
+
+1. System tools are auto-created (cannot manually create)
+2. Update via agent creation/update
+3. Can only modify: `active`, `disable_interruptions`, `force_pre_tool_speech`
+
+## Validation Rules
+
+- **Tool names** must be unique per agent
+- **Dynamic variables** referenced in assignments must exist in agent configuration
+- **Template variables** in URLs/headers/bodies must exist in parameters or agent dynamic variables
+- **Webhook URLs** must be valid HTTP/HTTPS endpoints
+- **HTTP methods** must be: GET, POST, PUT, PATCH, DELETE
+- **System tools** cannot be manually created or deleted
+
+## See Also
+
+- [Get System Tools](/agents/system-tools) - View available system tools
+- [Create Agent](/agents/create) - Configure system tools during creation
+- [Update Agent](/agents/update) - Modify system tool settings

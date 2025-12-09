@@ -1,0 +1,125 @@
+---
+title: Delete Knowledge Item
+slug: /agents/knowledge-base/delete
+---
+
+Deletes a knowledge item and cleans up associated data (chunks in search index, blob storage).
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/knowledge_items/{uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The UUID of the knowledge item |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/knowledge_items/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "message": "Knowledge item deleted successfully"
+}
+```
+
+## Error Response (Not Found)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Knowledge item not found"]
+  },
+  "message": "Failed to delete knowledge item"
+}
+```
+
+## What Gets Deleted
+
+When you delete a knowledge item, the following data is removed:
+
+1. **Knowledge Item Record**: The main database record
+2. **Chunks**: All indexed chunks in the search system
+3. **Embeddings**: Vector embeddings for semantic search
+4. **Blob Storage**: Document files stored in cloud storage (for document type)
+5. **Agent Associations**: All attachments to agents are removed
+
+## Deletion Behavior
+
+### Attached Agents
+
+- If the knowledge item is attached to one or more agents, it will be automatically detached from all agents before deletion
+- Agents will no longer have access to this knowledge in their RAG retrieval
+- No need to manually detach before deleting
+
+### Processing Status
+
+- Knowledge items can be deleted in any status: `pending`, `processing`, `ready`, or `failed`
+- If an item is currently `processing`, the deletion will cancel the ingestion job
+
+### Irreversibility
+
+- Deletion is permanent and cannot be undone
+- All processed chunks and embeddings are permanently removed
+- Document files are deleted from blob storage
+- You will need to re-create and re-process the knowledge item if needed
+
+## Common Use Cases
+
+### Remove Outdated Knowledge
+
+```bash
+# Delete an old FAQ document that's no longer relevant
+curl --request DELETE "https://app.resemble.ai/api/v2/knowledge_items/old-faq-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Clean Up Failed Items
+
+```bash
+# Delete a knowledge item that failed to process
+curl --request DELETE "https://app.resemble.ai/api/v2/knowledge_items/failed-item-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Free Up Team Quota
+
+```bash
+# Delete unused items to make room for new ones (max 3 per team)
+curl --request DELETE "https://app.resemble.ai/api/v2/knowledge_items/unused-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+## Best Practices
+
+### Before Deleting
+
+1. **Check Attached Agents**: Use [Get Knowledge Item](/agents/knowledge-base/get) to see which agents are using this knowledge
+2. **Notify Users**: If agents are actively using this knowledge, inform users before deletion
+3. **Backup Content**: If you might need the content later, save the source URL or document file
+
+### Alternative to Deletion
+
+If you want to temporarily disable knowledge without deleting:
+
+1. Use [Detach Knowledge Item from Agent](/agents/knowledge-base/detach) to remove from specific agents
+2. Keep the knowledge item for potential future use
+3. Re-attach when needed without re-processing
+
+## See Also
+
+- [Detach Knowledge Item from Agent](/agents/knowledge-base/detach) - Remove from specific agents without deleting
+- [Get Knowledge Item](/agents/knowledge-base/get) - Check which agents are using the knowledge item
+- [Create Knowledge Item](/agents/knowledge-base/create) - Create a new knowledge item if needed

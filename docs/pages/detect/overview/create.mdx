@@ -1,0 +1,171 @@
+---
+title: Submit Detection Job
+slug: /detect/create
+---
+
+`POST https://app.resemble.ai/api/v2/detect`
+
+By default the request is asynchronous. The API responds immediately with a job UUID while analysis continues in the background. Include `Prefer: wait` to block until completion.
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/detect' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Prefer: wait' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/media.mp4",
+    "callback_url": "https://example.com/webhooks/detect",
+    "visualize": true,
+    "frame_length": 2
+  }'
+```
+
+## Required Field
+
+| Field | Description |
+| --- | --- |
+| `url` | Public HTTPS URL to the media to analyze (wav, mp3, ogg, m4a, flac, mp4, mov, avi, wmv, jpg, jpeg, png, gif, webp). |
+
+## Optional Parameters
+
+| Field | Applies To | Description |
+| --- | --- | --- |
+| `callback_url` | All | POST destination when analysis completes. Payload matches the standard response. |
+| `visualize` | All | Generate visualization artifacts (images/treeview). |
+| `frame_length` | Audio & Video | Window size in seconds (`1`–`4`, default `2`). |
+| `start_region` / `end_region` | Audio & Video | Analyze a segment (seconds). |
+| `pipeline` | Image & Video | Sequence of detectors (`general`, `facial`, `object`) separated by `->`. Default `general->facial->object`. |
+| `max_video_fps` | Video | Downsample high-frame-rate media. |
+| `max_video_secs` | Video | Cap processed duration. |
+| `model_types` | Video | `image` or `talking_head`. Use `talking_head` for face-swaps. |
+
+## Response
+
+### Asynchronous Response
+
+By default, the API responds immediately while processing continues in the background:
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "metrics": {},
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z",
+    "media_type": "audio"
+  }
+}
+```
+
+Use the UUID to check status via the Get Detection Result endpoint, or provide a `callback_url` to receive results automatically.
+
+### Synchronous Response (with `Prefer: wait` header)
+
+When using the `Prefer: wait` header, the API returns complete results immediately:
+
+#### Audio File Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "metrics": {
+      "image": "",
+      "label": "fake",
+      "score": ["0.9", "0.8", "0.7"],
+      "consistency": "0.85",
+      "aggregated_score": "0.80"
+    },
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:05Z",
+    "duration": "5.2",
+    "media_type": "audio"
+  }
+}
+```
+
+#### Image File Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "metrics": {},
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:02Z",
+    "url": "https://example.com/image.jpg",
+    "duration": "0",
+    "media_type": "image",
+    "image_metrics": {
+      "type": "facial",
+      "image": "https://...",
+      "label": "fake",
+      "score": 0.92,
+      "children": []
+    }
+  }
+}
+```
+
+#### Video File Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "metrics": {
+      "image": "https://...",
+      "label": "fake",
+      "score": ["0.9", "0.8", "0.7"],
+      "consistency": "0.85",
+      "aggregated_score": "0.80"
+    },
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:10Z",
+    "duration": "10.5",
+    "media_type": "video",
+    "video_metrics": {
+      "label": "Fake",
+      "score": 0.95,
+      "certainty": 0.93,
+      "treeview": "...",
+      "children": [
+        {
+          "type": "VideoResult",
+          "conclusion": "Fake",
+          "score": 0.99,
+          "certainty": 0.9,
+          "certainty (%)": "90.0",
+          "children": [
+            {
+              "type": "ImageResult",
+              "conclusion": "Fake",
+              "score": 0.9,
+              "certainty": 0.95,
+              "certainty (%)": "95.0",
+              "timestamp": 0.23,
+              "children": [
+                {
+                  "type": "Segment",
+                  "conclusion": "Fake",
+                  "score": 0.9,
+                  "certainty": 0.995,
+                  "certainty (%)": "99.5"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+### Callback URL
+
+If you provide a `callback_url` when submitting a media file, you will receive a POST request to that URL with the same payload structure as the synchronous response shown above.

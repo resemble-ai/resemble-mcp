@@ -1,0 +1,42 @@
+---
+title: List Projects
+slug: /platform-management/projects/list
+---
+
+`GET https://app.resemble.ai/api/v2/projects`
+
+## Query Parameters
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `page` | integer | ❌ | Page number for pagination. |
+| `page_size` | integer | ❌ | Number of items per page. |
+
+## Example Request
+
+```bash
+curl 'https://app.resemble.ai/api/v2/projects?page=1&page_size=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "total_results": 40,
+  "page_count": 4,
+  "items": [
+    {
+      "uuid": "PROJECT_UUID",
+      "name": "Game NPC Library",
+      "description": "Clips for characters",
+      "is_collaborative": true,
+      "is_archived": false,
+      "created_at": "2024-01-15T10:30:00Z",
+      "updated_at": "2024-01-15T10:32:00Z"
+    }
+  ]
+}
+```

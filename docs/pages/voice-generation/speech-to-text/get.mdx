@@ -1,0 +1,113 @@
+---
+title: Get Transcript
+slug: /voice-generation/speech-to-text/get
+---
+
+Use the transcript UUID to retrieve status, transcript text, word-level timestamps, and Intelligence answers.
+
+## Endpoint
+
+`GET https://app.resemble.ai/api/v2/speech-to-text/{uuid}`
+
+### Path Parameter
+
+| Parameter | Description |
+| --- | --- |
+| `uuid` | Transcript UUID returned from the create call. |
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "text": "Hello, this is a sample transcript...",
+    "words": [
+      {
+        "word": "Hello",
+        "start": 0.23,
+        "end": 0.67,
+        "confidence": 0.99
+      },
+      {
+        "word": "this",
+        "start": 0.7,
+        "end": 0.9,
+        "confidence": 0.98
+      }
+    ],
+    "query": "What are the key points?",
+    "answer": "The key points discussed were...",
+    "status": "completed",
+    "file_url": "https://storage.resemble.ai/...",
+    "duration_seconds": 120.5,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:32:00Z"
+  }
+}
+```
+
+### Response Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | string | Transcript UUID. |
+| `text` | string | Full transcript (present once processing completes). |
+| `words` | array | Array of word objects with timestamps. |
+| `query` | string | Initial Intelligence question. |
+| `answer` | string | Answer to the query. |
+| `status` | string | `pending`, `processing`, `completed`, or `failed`. |
+| `file_url` | string | URL to the original media file. |
+| `duration_seconds` | number | Media duration in seconds. |
+| `created_at` | datetime | Timestamp when created. |
+| `updated_at` | datetime | Timestamp when last updated. |
+
+### Word Object
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `word` | string | Transcribed word. |
+| `start` | number | Start time in seconds. |
+| `end` | number | End time in seconds. |
+| `confidence` | number | Confidence score for the transcription. |
+
+## Example
+
+```bash
+curl --request GET \
+  'https://app.resemble.ai/api/v2/speech-to-text/550e8400-e29b-41d4-a716-446655440000' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Polling Pattern
+
+```bash
+transcript_uuid="550e8400-e29b-41d4-a716-446655440000"
+delay=2
+
+while true; do
+  response=$(curl -s -H "Authorization: Bearer YOUR_API_TOKEN" \
+    "https://app.resemble.ai/api/v2/speech-to-text/$transcript_uuid")
+
+  status=$(echo "$response" | jq -r '.item.status')
+  if [ "$status" = "completed" ] || [ "$status" = "failed" ]; then
+    echo "$response"
+    break
+  fi
+
+  sleep $delay
+  delay=$((delay * 2))
+done
+```
+
+## Errors
+
+```json
+{
+  "success": false,
+  "error": "Transcript not found"
+}
+```
+
+Typical status codes: `401` for bad tokens, `403` for insufficient roles, `404` for unknown UUIDs, and `500` for processing failures.

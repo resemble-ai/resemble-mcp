@@ -1,0 +1,25 @@
+---
+title: WebSocket Streaming
+slug: /guides/creating-clips/websocket-streaming
+---
+
+> **Business plan required:** The WebSocket API is available to Business-tier accounts. Upgrade on the [billing page](https://app.resemble.ai/account/billing) if you receive authorization errors.
+
+Stream audio as it is generated to deliver low-latency playback for assistants, live dubbing, and interactive demos.
+
+## Quick Setup
+
+```bash
+pip install websockets pyaudio python-dotenv
+```
+
+Create a `.env` file with `RESEMBLE_API_KEY=your_token` and pick a streaming-enabled `voice_uuid`.
+
+## Learning Path
+
+- [Getting Started](./websocket-streaming/getting-started) – capabilities and prerequisites.
+- [Receiving Audio Data](./websocket-streaming/receiving-audio) – request payloads, JSON vs binary frames, termination messages.
+- [Python Streaming Example](./websocket-streaming/python-example) – end-to-end script with reconnection logic and TTFS logging.
+- [Error Handling](./websocket-streaming/error-handling) – recoverable vs unrecoverable errors.
+
+For protocol details and WAV metadata, see the [HTTP streaming reference](/voice-generation/text-to-speech/streaming-http) and [WebSocket API docs](/voice-generation/text-to-speech/streaming-websocket).

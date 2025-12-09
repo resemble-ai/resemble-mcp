@@ -1,0 +1,103 @@
+---
+title: Synthesize Your First Clip
+slug: /guides/creating-clips/getting-started
+---
+
+Learn how to synthesize audio clips using the Resemble API.
+
+## Prerequisites
+
+- Resemble account with confirmed email
+- API key (see [Authentication](/getting-started/authentication))
+- A voice UUID (use a marketplace voice or create your own)
+
+## Quick Examples
+
+### HTTP (curl)
+
+```bash
+curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "voice_uuid": "YOUR_VOICE_UUID",
+    "data": "Hello from Resemble!",
+    "sample_rate": 22050,
+    "output_format": "wav"
+  }' \
+  | jq -r '.audio_content' | base64 --decode > output.wav
+```
+
+### Node.js
+
+```bash
+npm install @resemble/node
+```
+
+```js
+import { Resemble } from "@resemble/node";
+
+Resemble.setApiKey(process.env.RESEMBLE_API_KEY);
+
+const response = await Resemble.v2.clips.createSync("YOUR_PROJECT_UUID", {
+  voice_uuid: "YOUR_VOICE_UUID",
+  body: "Hello from Resemble!",
+  title: "My First Clip"
+});
+
+console.log(response.item.audio_src);
+```
+
+### Python
+
+```bash
+pip install resemble
+```
+
+```python
+from resemble import Resemble
+import os
+
+Resemble.api_key(os.environ.get("RESEMBLE_API_KEY"))
+
+response = Resemble.v2.clips.create_sync(
+    "YOUR_PROJECT_UUID",
+    "YOUR_VOICE_UUID",
+    "Hello from Resemble!",
+    title="My First Clip"
+)
+
+print(response["item"]["audio_src"])
+```
+
+## Response
+
+The synthesis server returns:
+
+```json
+{
+  "success": true,
+  "audio_content": "<base64-encoded-audio>",
+  "audio_timestamps": {
+    "graph_chars": ["H", "e", "l", "l", "o", " ", "f", "r", "o", "m", " ", "R", "e", "s", "e", "m", "b", "l", "e", "!"],
+    "graph_times": [[0.08, 0.12], [0.12, 0.18], [0.18, 0.24], [0.24, 0.30], [0.30, 0.36], [0.36, 0.40], [0.40, 0.46], [0.46, 0.52], [0.52, 0.58], [0.58, 0.64], [0.64, 0.68], [0.68, 0.74], [0.74, 0.80], [0.80, 0.86], [0.86, 0.92], [0.92, 0.98], [0.98, 1.04], [1.04, 1.10], [1.10, 1.16], [1.16, 1.68]],
+    "phon_chars": [],
+    "phon_times": []
+  },
+  "duration": 1.68,
+  "issues": [],
+  "output_format": "wav",
+  "sample_rate": 22050,
+  "seed": 3389672177,
+  "synth_duration": 1.68,
+  "title": null
+}
+```
+
+Decode `audio_content` from base64 to get the raw audio bytes.
+
+## Next Steps
+
+- Learn about [streaming synthesis](/voice-generation/text-to-speech/streaming-http) for lower latency
+- Explore [voice cloning](/voice-creation/voices/clone-overview) to create custom voices
+- See [SSML Reference](/getting-started/ssml) for advanced speech control

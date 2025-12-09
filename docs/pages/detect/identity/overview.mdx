@@ -1,0 +1,27 @@
+---
+title: Identity API
+slug: /detect/identity
+---
+
+> **Beta:** Reach out to the Resemble team to join the preview program.
+
+Create and manage voice identity profiles, then search incoming audio against known identities.
+
+```ts
+interface Identity {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface CreateIdentityRequest {
+  name: string;
+  url: string; // audio sample URL
+}
+
+interface SearchIdentityResponse {
+  success: boolean;
+  item: Record<string, { name: string; distance: number }>;
+}
+```

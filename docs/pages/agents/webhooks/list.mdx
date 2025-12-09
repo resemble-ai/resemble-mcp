@@ -1,0 +1,90 @@
+---
+title: List Webhooks
+slug: /agents/webhooks/list
+---
+
+Retrieve all webhooks configured for an agent.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/{agent_uuid}/webhooks
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/webhooks" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": 1,
+      "webhook_type": "pre_call",
+      "webhook_config": {
+        "api_schema": {
+          "url": "https://api.example.com/pre-call",
+          "method": "POST",
+          "request_headers": {
+            "Authorization": "Bearer secret123"
+          },
+          "request_body": {
+            "agent_id": "{{agent_uuid}}",
+            "caller": "{{caller_phone}}"
+          }
+        },
+        "assignments": [
+          {
+            "source": "response",
+            "attribute_name": "customer_name",
+            "dynamic_variable": "customer_name"
+          }
+        ],
+        "response_timeout_secs": 10
+      },
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "webhook_type": "post_call",
+      "webhook_config": {
+        "api_schema": {
+          "url": "https://api.example.com/post-call",
+          "method": "POST"
+        },
+        "response_timeout_secs": 5
+      },
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    }
+  ],
+  "count": 2
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of webhook objects |
+| count | integer | Total number of webhooks |
+| id | integer | Webhook ID |
+| webhook_type | string | Webhook type: "pre_call" or "post_call" |
+| webhook_config | object | Webhook configuration (varies by type) |
+| created_at | string | ISO8601 timestamp |
+| updated_at | string | ISO8601 timestamp |

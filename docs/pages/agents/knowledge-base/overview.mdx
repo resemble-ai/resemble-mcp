@@ -1,0 +1,159 @@
+---
+title: Agent Knowledge Base
+slug: /agents/knowledge-base/overview
+---
+
+The Agent Knowledge Base API enables RAG (Retrieval Augmented Generation) support for conversational AI agents. Teams can upload documents, URLs, or plain text as "knowledge items" which are processed (extracted, chunked, embedded, and indexed) and then attached to agents for context-aware responses.
+
+## What is Agent Knowledge Base?
+
+Agent Knowledge Base allows agents to:
+
+- **Access Information**: Retrieve relevant context from uploaded documents, URLs, or text
+- **Answer Questions**: Provide accurate responses based on indexed knowledge
+- **Stay Up-to-Date**: Re-ingest content when sources change
+- **Scale Responses**: Handle domain-specific queries with confidence
+
+## Core Concepts
+
+### Knowledge Item
+
+A unit of knowledge (document, URL, or text) that belongs to a team. Knowledge items can be:
+
+- **Documents**: PDF files up to 25MB
+- **URLs**: Web pages with HTTP/HTTPS protocols
+- **Text**: Plain text up to 10,000 characters
+
+### Agent Knowledge Item
+
+A join relationship that attaches a knowledge item to an agent. Knowledge items can be shared across multiple agents.
+
+### RAG Configuration
+
+Per-agent settings for how knowledge retrieval works:
+
+- **search_mode**: Choose between `"speed"` (faster, less thorough) or `"accuracy"` (more thorough)
+- **max_chunks_per_query**: Number of relevant chunks to retrieve per query (must be > 0, default: 8)
+
+## Knowledge Item Lifecycle
+
+```
+Created (pending) → Processing → Ready (can attach to agents)
+                              → Failed (error_message explains why)
+```
+
+### Status Definitions
+
+| Status | Description |
+| --- | --- |
+| pending | Created, waiting for ingestion to start |
+| processing | Currently being extracted, chunked, embedded, and indexed |
+| ready | Successfully processed, can be attached to agents |
+| failed | Processing failed, check error_message for details |
+
+## Key Features
+
+### Flexible Content Sources
+
+Upload knowledge from multiple sources:
+- PDF documents with automatic text extraction
+- Web pages for dynamic content
+- Direct text input for quick knowledge additions
+
+### Automatic Processing
+
+The platform handles all processing automatically:
+1. **Extraction**: Extract text from PDFs or fetch from URLs
+2. **Chunking**: Split content into optimal-sized chunks
+3. **Embedding**: Generate vector embeddings for semantic search
+4. **Indexing**: Store in search index for fast retrieval
+
+### Re-Ingestion
+
+Update knowledge when source content changes:
+- Re-run the entire ingestion pipeline
+- Rate limited to 1 request per minute per item
+- Cannot re-ingest items currently processing
+
+### RAG Search Modes
+
+Choose the right balance for your use case:
+- **Speed Mode**: Faster retrieval with less thoroughness
+- **Accuracy Mode**: More thorough retrieval for critical applications
+
+## API Resources
+
+The Knowledge Base API is organized into two scopes:
+
+### Team-Scoped Knowledge Items
+
+Manage knowledge items at the team level:
+
+- [List Knowledge Items](/agents/knowledge-base/list)
+- [Get Knowledge Item](/agents/knowledge-base/get)
+- [Create Knowledge Item](/agents/knowledge-base/create)
+- [Delete Knowledge Item](/agents/knowledge-base/delete)
+- [Re-ingest Knowledge Item](/agents/knowledge-base/reingest)
+
+### Agent-Scoped Knowledge Items
+
+Attach and detach knowledge items to specific agents:
+
+- [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items)
+- [Attach Knowledge Item to Agent](/agents/knowledge-base/attach)
+- [Detach Knowledge Item from Agent](/agents/knowledge-base/detach)
+
+## Constraints & Limits
+
+| Constraint | Value |
+| --- | --- |
+| Maximum knowledge items per team | 3 |
+| Title maximum length | 50 characters |
+| Description maximum length | 200 characters |
+| Document maximum file size | 25 MB |
+| Raw text maximum length | 10,000 characters |
+| Supported document formats | PDF only |
+| Re-ingest rate limit | 1 request per minute per item |
+
+## Common Workflows
+
+### Workflow 1: Add Knowledge to an Agent
+
+1. **Create knowledge item**: `POST /api/v2/knowledge_items`
+2. **Poll for status**: `GET /api/v2/knowledge_items/:uuid` until `status: "ready"`
+3. **Attach to agent**: `POST /api/v2/agents/:agent_uuid/knowledge_items`
+
+### Workflow 2: Update Knowledge Content
+
+1. **Update source** (e.g., update the webpage content)
+2. **Trigger reingest**: `POST /api/v2/knowledge_items/:uuid/reingest`
+3. **Poll for status**: `GET /api/v2/knowledge_items/:uuid` until `status: "ready"`
+
+### Workflow 3: Remove Knowledge from Agent
+
+1. **Detach from agent**: `DELETE /api/v2/agents/:agent_uuid/knowledge_items/:knowledge_item_uuid`
+2. (Optional) **Delete knowledge item**: `DELETE /api/v2/knowledge_items/:uuid`
+
+## Getting Started
+
+To use the Knowledge Base API, you'll need:
+
+1. An API token for authentication
+2. At least one agent (get via [Agents API](/agents/overview))
+3. Knowledge content (document, URL, or text)
+
+## Base URL
+
+```
+https://app.resemble.ai/api/v2
+```
+
+## Authentication
+
+All requests require Bearer token authentication using your API key:
+
+```bash
+Authorization: Bearer YOUR_API_TOKEN
+```
+
+Get your API key from [https://app.resemble.ai/account/api](https://app.resemble.ai/account/api)

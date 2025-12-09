@@ -1,0 +1,32 @@
+---
+title: Get Project
+slug: /platform-management/projects/get
+---
+
+`GET https://app.resemble.ai/api/v2/projects/{uuid}`
+
+Retrieve details of a specific project.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `uuid` | string | ✅ | Project UUID (URL parameter). |
+
+```bash
+curl 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "PROJECT_UUID",
+    "name": "Game NPC Library",
+    "description": "Clips for characters",
+    "is_collaborative": true,
+    "is_archived": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:32:00Z"
+  }
+}
+```

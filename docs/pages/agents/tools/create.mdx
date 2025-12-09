@@ -1,0 +1,186 @@
+---
+title: Create Tool
+slug: /agents/tools/create
+---
+
+Create a new tool for an agent. Tools can be webhook tools (call external APIs) or client tools (trigger client-side actions). System tools cannot be manually created.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/agents/{agent_uuid}/tools
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| name | string | Yes | Unique tool name (per agent) |
+| description | string | Yes | Description for LLM (min 1 character) |
+| tool_type | string | Yes | Tool type: "webhook" or "client" |
+| tool_config | object | Yes | Tool configuration (see below) |
+
+> **Note**: `tool_type: "system"` is not allowed. System tools are automatically created by the platform.
+
+## Webhook Tool Example
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/tools" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "name": "check_weather",
+    "description": "Check weather for a given location and store the temperature",
+    "tool_type": "webhook",
+    "tool_config": {
+      "api_schema": {
+        "url": "https://api.weather.com/check?location={{location}}",
+        "method": "GET",
+        "request_headers": {
+          "Authorization": "Bearer {{weather_api_key}}"
+        }
+      },
+      "parameters": {
+        "location": {
+          "type": "string",
+          "description": "City name to check weather for"
+        }
+      },
+      "assignments": [
+        {
+          "source": "response",
+          "attribute_name": "temperature",
+          "dynamic_variable": "current_temp"
+        }
+      ],
+      "response_timeout_secs": 30
+    }
+  }'
+```
+
+## Client Tool Example
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/tools" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "name": "show_product",
+    "description": "Display product details to the customer",
+    "tool_type": "client",
+    "tool_config": {
+      "parameters": {
+        "product_id": {
+          "type": "string",
+          "description": "Product identifier"
+        }
+      },
+      "assignments": [
+        {
+          "source": "argument",
+          "attribute_name": "product_id",
+          "dynamic_variable": "displayed_product"
+        }
+      ],
+      "return_message": "Product displayed to customer",
+      "disable_interruptions": false,
+      "force_pre_tool_speech": false
+    }
+  }'
+```
+
+## Webhook Tool Configuration
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| api_schema | object | Yes | API endpoint configuration |
+| parameters | object | No | Tool parameters for LLM |
+| assignments | array | Yes | Variable assignments from response |
+| response_timeout_secs | integer | No | Timeout in seconds (1-60, default: 30) |
+
+### API Schema
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| url | string | Yes | HTTP/HTTPS URL (supports `{{variable}}` templating) |
+| method | string | Yes | HTTP method: GET, POST, PUT, PATCH, DELETE |
+| request_headers | object | No | HTTP headers (supports `{{variable}}` templating) |
+| request_body | object | No | Request body for POST/PUT/PATCH |
+
+## Client Tool Configuration
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| parameters | object | Yes | Tool parameters for LLM |
+| assignments | array | Yes | Variable assignments from arguments |
+| return_message | string | Yes | Message to return after execution |
+| disable_interruptions | boolean | Yes | Prevent interruptions during execution |
+| force_pre_tool_speech | boolean | Yes | Force agent speech before tool use |
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "id": 1,
+    "name": "check_weather",
+    "description": "Check weather for a given location and store the temperature",
+    "tool_type": "webhook",
+    "tool_config": {
+      "api_schema": {
+        "url": "https://api.weather.com/check?location={{location}}",
+        "method": "GET"
+      },
+      "parameters": {
+        "location": {
+          "type": "string",
+          "description": "City name to check weather for"
+        }
+      },
+      "assignments": [
+        {
+          "source": "response",
+          "attribute_name": "temperature",
+          "dynamic_variable": "current_temp"
+        }
+      ],
+      "response_timeout_secs": 30
+    },
+    "active": true,
+    "created_at": "2025-01-27T10:00:00Z",
+    "updated_at": "2025-01-27T10:00:00Z"
+  },
+  "message": "Tool created successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "name": ["has already been taken"],
+    "description": ["can't be blank"],
+    "tool_config": [
+      "api_schema.url must be a valid HTTP or HTTPS URL",
+      "assignments[0].dynamic_variable 'current_temp' does not exist in agent's dynamic_variables",
+      "api_schema contains templated variable '{{weather_api_key}}' that does not exist in parameters or agent's dynamic_variables"
+    ]
+  },
+  "message": "Failed to create tool"
+}
+```
+
+## See Also
+
+- [Agent Tools Overview](/agents/tools/overview) - Learn about tool types and configuration
+- [Update Tool](/agents/tools/update) - Modify existing tools
+- [Delete Tool](/agents/tools/delete) - Remove tools

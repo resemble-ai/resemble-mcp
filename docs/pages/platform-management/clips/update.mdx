@@ -1,0 +1,75 @@
+---
+title: Update Clip
+slug: /platform-management/clips/update
+---
+
+`PATCH https://app.resemble.ai/api/v2/projects/{project_uuid}/clips/{clip_uuid}` or `PUT https://app.resemble.ai/api/v2/projects/{project_uuid}/clips/{clip_uuid}`
+
+## Request Body
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `title` | string | ❌ | Clip title (max 256 characters). |
+| `body` | string | ❌ | Text to synthesize. |
+| `voice_uuid` | string | ❌ | UUID of voice to use. |
+| `is_archived` | boolean | ❌ | Whether clip is archived. |
+| `callback_uri` | string | ✅ | HTTPS URL for async callback (required for updates). |
+| `sample_rate` | integer | ❌ | Audio sample rate: 8000, 16000, 22050, 24000, 32000, 44100, or 48000. Default: 22050. |
+| `precision` | string | ❌ | Audio precision: PCM_16, PCM_24, or PCM_32. Default: PCM_32. |
+| `output_format` | string | ❌ | Output format: wav, mp3, ogg, flac, etc. Default: wav. |
+
+**Note:** Update operations are asynchronous. A `callback_uri` is required to receive the synthesized result.
+
+## Example Request
+
+```bash
+curl --request PUT 'https://app.resemble.ai/api/v2/projects/PROJECT_UUID/clips/CLIP_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "title": "Narration Intro",
+    "body": "Welcome to the product update",
+    "voice_uuid": "VOICE_UUID",
+    "is_archived": false,
+    "callback_uri": "https://example.com/webhooks/resemble",
+    "include_timestamps": true
+  }'
+```
+
+### Responses
+
+1. Immediate response:
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "CLIP_UUID",
+    "title": "Narration Intro",
+    "body": "Welcome to the product update",
+    "voice_uuid": "VOICE_UUID",
+    "is_archived": false,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+2. Callback payload (`POST {callback_uri}`):
+
+```json
+{
+  "id": "CLIP_UUID",
+  "project_id": "PROJECT_UUID",
+  "url": "https://...", // expires after 1 hour
+  "audio_timestamps": {
+    "graph_chars": ["W", "e", ...],
+    "graph_times": [[0, 120], ...],
+    "phon_chars": ["W", "EH", ...],
+    "phon_times": [[0, 120], ...]
+  },
+  "issues": []
+}
+```
+
+Use tools like [webhook.site](https://webhook.site/) to inspect callback payloads during development.

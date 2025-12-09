@@ -1,0 +1,206 @@
+---
+title: Re-ingest Knowledge Item
+slug: /agents/knowledge-base/reingest
+---
+
+Re-runs the ingestion pipeline (extraction, chunking, embedding, indexing) for an existing knowledge item. Useful when the source content has changed or if the initial ingestion failed.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/knowledge_items/{uuid}/reingest
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The UUID of the knowledge item |
+
+## Example Request
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items/550e8400-e29b-41d4-a716-446655440000/reingest" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Product FAQ",
+    "description": "FAQ content",
+    "source_type": "url",
+    "status": "pending",
+    "error_message": null,
+    "chunk_count": null,
+    "url": "https://example.com/faq",
+    "agent_count": 2,
+    "created_at": "2025-12-01T10:00:00Z",
+    "updated_at": "2025-12-01T12:00:00Z"
+  },
+  "message": "Re-ingestion has been queued"
+}
+```
+
+## Error Response (Already Processing)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item": [{ "error": "already_processing", "message": "Knowledge item is already being processed" }]
+  },
+  "message": "Failed to reingest knowledge item"
+}
+```
+
+## Error Response (Rate Limited)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item": [{ "error": "rate_limited", "message": "Must wait 1 minute between reingest requests" }]
+  },
+  "message": "Failed to reingest knowledge item"
+}
+```
+
+## Constraints
+
+### Rate Limiting
+
+- Must wait **1 minute** between re-ingest requests for the same knowledge item
+- This prevents excessive processing and ensures system stability
+- The rate limit counter resets after successful completion or failure
+
+### Status Requirements
+
+- Cannot re-ingest items that are currently `processing`
+- Can re-ingest items with status: `pending`, `ready`, or `failed`
+- If status is `processing`, wait until it completes before attempting re-ingest
+
+## Re-ingestion Process
+
+When you trigger re-ingestion:
+
+1. **Status Reset**: Knowledge item status changes to `pending`
+2. **Chunk Cleanup**: Existing chunks in search index are marked for removal
+3. **Queue Job**: New ingestion job is queued
+4. **Processing Begins**: Status transitions to `processing`
+5. **Fresh Extraction**:
+   - For URLs: Fetches latest content from the URL
+   - For Documents: Re-processes the uploaded PDF file
+   - For Text: Re-processes the stored text
+6. **Re-chunking**: Content is chunked again (may produce different chunks)
+7. **Re-embedding**: New vector embeddings are generated
+8. **Re-indexing**: New chunks replace old ones in search index
+9. **Completion**: Status becomes `ready` or `failed`
+
+## Use Cases
+
+### Content Updates
+
+When the source content has changed:
+
+```bash
+# Website FAQ has been updated with new information
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items/faq-uuid/reingest" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Failed Ingestion
+
+Retry after fixing issues that caused initial failure:
+
+```bash
+# Original URL was temporarily down, now it's accessible
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items/failed-uuid/reingest" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Improved Processing
+
+Take advantage of improved ingestion algorithms:
+
+```bash
+# Platform has improved chunking/embedding, re-ingest for better results
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items/old-uuid/reingest" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+## Monitoring Progress
+
+After triggering re-ingestion, poll the [Get Knowledge Item](/agents/knowledge-base/get) endpoint to monitor progress:
+
+```bash
+# Check status every few seconds
+curl --request GET "https://app.resemble.ai/api/v2/knowledge_items/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+Status progression:
+- `pending` → `processing` → `ready` (success)
+- `pending` → `processing` → `failed` (error, check `error_message`)
+
+## Impact on Agents
+
+### During Re-ingestion
+
+- Agents that have this knowledge item attached will **continue to use the old chunks** during re-ingestion
+- No interruption to agent functionality
+- RAG retrieval uses the existing chunks until new ones are ready
+
+### After Re-ingestion
+
+- Once status becomes `ready`, agents automatically start using the **new chunks**
+- No need to re-attach the knowledge item to agents
+- Immediate availability of updated knowledge
+
+## Best Practices
+
+### Scheduling Re-ingestion
+
+- **URL Sources**: Re-ingest periodically (daily, weekly) to keep content fresh
+- **Document Sources**: Re-ingest only when you upload a new version
+- **Text Sources**: Re-ingest only if you've updated the content via database
+
+### Handling Failures
+
+1. Check the `error_message` field in the response
+2. Fix the underlying issue (e.g., broken URL, corrupted PDF)
+3. Wait 1 minute for rate limit to reset
+4. Trigger re-ingest again
+
+### Automation
+
+Consider automating re-ingestion for URL-based knowledge items:
+
+```bash
+# Example: Daily cron job to refresh all URL-based knowledge items
+# (Implement your own rate limiting and error handling)
+for uuid in $(fetch_url_knowledge_item_uuids); do
+  curl --request POST "https://app.resemble.ai/api/v2/knowledge_items/$uuid/reingest" \
+    -H "Authorization: Bearer YOUR_API_TOKEN"
+  sleep 60  # Respect rate limit
+done
+```
+
+## Error Codes
+
+| Error Code | Description |
+| --- | --- |
+| already_processing | Cannot reingest while currently processing |
+| rate_limited | Must wait 1 minute between reingest requests |
+| not_found | Knowledge item not found |
+
+## See Also
+
+- [Get Knowledge Item](/agents/knowledge-base/get) - Monitor re-ingestion progress
+- [Create Knowledge Item](/agents/knowledge-base/create) - Initial ingestion process
+- [Update Agent](/agents/update) - Configure RAG settings

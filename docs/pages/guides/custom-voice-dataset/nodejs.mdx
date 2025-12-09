@@ -1,0 +1,79 @@
+---
+title: Node.js Workflow
+slug: /guides/custom-voice-dataset/nodejs
+---
+
+## Prerequisites
+
+- Resemble account with PRO plan or higher
+- API token (see [Authentication](/getting-started/authentication))
+
+## 1. Initialize the project
+
+```bash
+npm init -y
+npm install @resemble/node
+```
+
+## 2. Configure the SDK
+
+```js
+// resemble-clone-voice/index.js
+import * as Resemble from "@resemble/node";
+
+const apiKey = process.env.RESEMBLE_API_KEY;
+
+if (!apiKey) {
+  console.error("Please set the RESEMBLE_API_KEY environment variable.");
+  process.exit(1);
+}
+
+Resemble.Resemble.setApiKey(apiKey);
+```
+
+## 3. Create the voice
+
+```js
+async function createVoice() {
+  const voiceName = "My Voice Clone";
+  const dataset = "https://example.com/dataset.zip"; // Replace with your dataset URL
+
+  console.log(`Submitting request to create voice: ${voiceName}`);
+
+  try {
+    const response = await Resemble.Resemble.v2.voices.create({
+      name: voiceName,
+      dataset_url: dataset,
+    });
+
+    if (response.success) {
+      const voice = response.item;
+      console.log(
+        `Created voice ${voice.uuid}. Current status: ${voice.status}`
+      );
+    } else {
+      console.error("Voice creation failed", response);
+    }
+  } catch (error) {
+    console.error("Error creating voice:", error);
+  }
+}
+
+createVoice();
+```
+
+Datasets must be publicly accessible and follow [Resemble's supported formats](https://www.notion.so/Resemble-AI-Supported-Datasets-64e94dffc7fe4f518989df48d815879f). Verify reachability with:
+
+```bash
+curl -I https://url/to/your/dataset.zip
+```
+
+## 4. Run the script
+
+```bash
+RESEMBLE_API_KEY=... node index.js
+```
+
+You'll receive a response indicating the new voice UUID and the current training status (e.g., `initializing`). Monitor progress via the API or the [Voices dashboard](https://app.resemble.ai/hub/voices).
+
+For a recordings-based workflow, see the [custom voice with recordings guide](../custom-voice-recordings/getting-started).

@@ -1,0 +1,71 @@
+---
+title: Create Transcript Job
+slug: /voice-generation/speech-to-text/create
+---
+
+Submit audio or video for transcription. The API responds immediately with a UUID that you can poll for status updates.
+
+## Endpoint
+
+`POST https://app.resemble.ai/api/v2/speech-to-text`
+
+## Input Options
+
+### Direct Upload
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/speech-to-text' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'file=@/path/to/recording.mp4'
+```
+
+### Signed Token
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/speech-to-text' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{"audio_token": "eyJ..."}'
+```
+
+### Remote URL
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/speech-to-text' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{"url": "https://example.com/audio.wav"}'
+```
+
+## Parameters
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `audio_token` | string | ❌ | Token for uploaded audio file (from secure upload). |
+| `url` | string | ❌ | HTTPS URL to audio/video file. |
+| `file` | file | ❌ | Audio/video file upload. |
+| `query` | string | ❌ | Initial question to ask about the transcript. |
+
+**Note:** One of `audio_token`, `url`, or `file` must be provided. Maximum file size: 500 MB. Maximum duration: 180 minutes. URL download timeout: 30 seconds.
+
+## Response
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "550e8400-e29b-41d4-a716-446655440000",
+    "text": null,
+    "words": null,
+    "query": "Summarize the main points",
+    "answer": null,
+    "status": "pending",
+    "file_url": "https://...",
+    "duration_seconds": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Note:** Processing is asynchronous. The `text`, `words`, and `answer` fields will be populated when transcription completes.

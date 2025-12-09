@@ -1,0 +1,36 @@
+---
+title: Get Audio Edit
+slug: /audio-tools/audio-edit/get
+---
+
+`GET https://app.resemble.ai/api/v2/edit/{uuid}`
+
+Retrieve the result of an audio edit job.
+
+| Parameter | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `uuid` | string | ✅ | Audio edit UUID (URL parameter). |
+
+```bash
+curl 'https://app.resemble.ai/api/v2/edit/EDIT_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "EDIT_UUID",
+    "voice_uuid": "VOICE_UUID",
+    "original_transcript": "Hello world",
+    "target_transcript": "Hi there",
+    "input_audio_url": "https://...",
+    "result_audio_url": "https://...",
+    "error": null
+  }
+}
+```
+
+<Note>
+Result audio URL will be available when status=success. Error field will be present if the edit failed.
+</Note>

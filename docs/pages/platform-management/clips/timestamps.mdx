@@ -1,0 +1,30 @@
+---
+title: Clip Timestamps
+slug: /platform-management/clips/timestamps
+---
+
+All clip APIs return a `timestamps` object that maps graphemes and phonemes to start/end offsets in seconds. Use it to highlight words in a transcript or drive lip-sync animations.
+
+| Field | Description |
+| --- | --- |
+| `graph_chars` | Characters of the synthesized text (SSML stripped, entities unescaped). |
+| `graph_times` | Array of `[start, end]` pairs aligned to `graph_chars`. |
+| `phon_chars` | IPA phonemes (UTF-8) with diacritics/stress markers. |
+| `phon_times` | `[start, end]` pairs aligned to `phon_chars`. |
+
+## Example
+
+```json
+"timestamps": {
+  "graph_chars": ["H", "e", "y", " ", "t", "h", "e", "r", "e", "."],
+  "graph_times": [[0.0374, 0.1247], [0.0873, 0.1746], [0.1372, 0.2245], [0.1746, 0.3118], [0.2744, 0.3866], [0.2744, 0.3866], [0.3617, 0.4864], [0.4615, 0.5862], [0.4615, 0.5862], [0.5488, 0.6984]],
+  "phon_chars": ["h", "ˈe", "ɪ", " ", "ð", "ˈɛ", "ɹ", "."],
+  "phon_times": [[0.0374, 0.1247], [0.0873, 0.1746], [0.1372, 0.2245], [0.1746, 0.3118], [0.2744, 0.3866], [0.3617, 0.4864], [0.4615, 0.5862], [0.5488, 0.6984]]
+}
+```
+
+In this example, the character `H` starts at `0.0374s` and ends at `0.1247s`, while the phoneme `ˈe` spans `0.0873s` to `0.1746s`.
+
+## Streaming
+
+Streaming synthesis encodes timestamps in the WAV headers. See [Streaming over HTTP](/voice-generation/text-to-speech/streaming-http#header--format-chunks) for the chunk layout.

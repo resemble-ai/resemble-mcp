@@ -1,0 +1,116 @@
+---
+title: Dispatch Agent
+slug: /agents/dispatch
+---
+
+Dispatch an agent to start handling conversations. This creates a conversation session and connects the agent to the orchestrator.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/agents/{uuid}/dispatch
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| uuid | string | The unique identifier of the agent |
+
+## Example Request
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/dispatch" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "item": {
+    "success": true,
+    "agent_id": 123,
+    "conversation_uuid": "conv-550e8400-e29b-41d4-a716-446655440000",
+    "session_id": "sess-abc123def456",
+    "status": "dispatched",
+    "message": "Agent dispatched successfully"
+  },
+  "message": "Agent dispatched successfully"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "agent": ["Agent ASR configuration is missing"],
+    "dispatch": ["Failed to dispatch agent: Connection timeout"]
+  },
+  "message": "Failed to dispatch agent"
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| item.agent_id | integer | The agent's database ID |
+| item.conversation_uuid | string | Unique identifier for the conversation session |
+| item.session_id | string | Session identifier for the orchestrator |
+| item.status | string | Dispatch status |
+| message | string | Human-readable message |
+
+## Validation Rules
+
+Before dispatch, the agent must have all required configurations:
+
+- **ASR configuration**: Provider and model must be set
+- **TTS configuration**: Voice must be linked
+- **Turn configuration**: Turn-taking settings must be configured
+- **LLM configuration**: LLM provider and model must be set
+
+If any required configuration is missing, the dispatch will fail with a detailed error message indicating which component is incomplete.
+
+## Common Error Scenarios
+
+### Missing ASR Configuration
+
+```json
+{
+  "success": false,
+  "errors": {
+    "agent": ["Agent ASR configuration is missing"]
+  },
+  "message": "Failed to dispatch agent"
+}
+```
+
+### Missing Voice
+
+```json
+{
+  "success": false,
+  "errors": {
+    "agent": ["Agent TTS configuration is missing"]
+  },
+  "message": "Failed to dispatch agent"
+}
+```
+
+### Orchestrator Connection Error
+
+```json
+{
+  "success": false,
+  "errors": {
+    "dispatch": ["Failed to dispatch agent: Connection timeout"]
+  },
+  "message": "Failed to dispatch agent"
+}
+```

@@ -1,0 +1,153 @@
+---
+title: Get System Tools
+slug: /agents/system-tools
+---
+
+Retrieve all available system tools that can be configured for agents.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/system_tools
+```
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/system_tools" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "identifier": "end_call",
+      "description": "Use this tool to end the current phone call immediately.",
+      "default_config": {
+        "parameters": {},
+        "assignments": [],
+        "disable_interruptions": false,
+        "force_pre_tool_speech": false
+      },
+      "default_active": true
+    },
+    {
+      "identifier": "transfer_to_number",
+      "description": "Transfers the current call to another phone number.",
+      "default_config": {
+        "parameters": {},
+        "assignments": [],
+        "disable_interruptions": false,
+        "force_pre_tool_speech": false
+      },
+      "default_active": false
+    },
+    {
+      "identifier": "voicemail_detection",
+      "description": "Detects if the call has reached voicemail.",
+      "default_config": {
+        "parameters": {},
+        "assignments": [],
+        "disable_interruptions": false,
+        "force_pre_tool_speech": false
+      },
+      "default_active": false
+    }
+  ]
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of system tool objects |
+
+### System Tool Object
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| identifier | string | Unique identifier for the system tool |
+| description | string | Description of what the tool does (used by LLM) |
+| default_config | object | Default configuration for the tool |
+| default_active | boolean | Whether the tool is enabled by default |
+
+### Default Config Object
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| parameters | object | Tool parameters (empty for most system tools) |
+| assignments | array | Variable assignments (empty for most system tools) |
+| disable_interruptions | boolean | Whether to prevent user interruptions during tool use |
+| force_pre_tool_speech | boolean | Whether to force agent to speak before using tool |
+
+## Available System Tools
+
+### end_call
+
+Ends the current phone call immediately.
+
+- **Default Active**: `true`
+- **Use Case**: Agent determines conversation is complete
+- **Interruptions**: Disabled by default to ensure clean call termination
+
+### transfer_to_number
+
+Transfers the current call to another phone number.
+
+- **Default Active**: `false`
+- **Use Case**: Agent needs to escalate to human support or different department
+- **Interruptions**: Disabled during transfer to prevent confusion
+
+### voicemail_detection
+
+Detects if the call has reached voicemail instead of a person.
+
+- **Default Active**: `false`
+- **Use Case**: Outbound calling scenarios where detecting voicemail matters
+- **Interruptions**: N/A (detection happens automatically)
+
+## Configuring System Tools
+
+System tools are automatically created for each agent. You can configure them during agent creation or update:
+
+```json
+{
+  "system_tools": {
+    "end_call": {
+      "active": true,
+      "disable_interruptions": false,
+      "force_pre_tool_speech": false
+    },
+    "transfer_to_number": {
+      "active": true,
+      "disable_interruptions": true,
+      "force_pre_tool_speech": true
+    },
+    "voicemail_detection": {
+      "active": true,
+      "disable_interruptions": false,
+      "force_pre_tool_speech": false
+    }
+  }
+}
+```
+
+## Limitations
+
+- System tools **cannot be created** manually (they are platform-provided)
+- System tools **cannot be deleted** (they can only be disabled via `active: false`)
+- System tool identifiers and core functionality **cannot be modified**
+- Only configuration flags (`active`, `disable_interruptions`, `force_pre_tool_speech`) can be updated
+
+## See Also
+
+- [Create Agent](/agents/create) - Configure system tools during agent creation
+- [Update Agent](/agents/update) - Modify system tool settings
+- [Agent Tools Overview](/agents/tools/overview) - Learn about custom webhook and client tools

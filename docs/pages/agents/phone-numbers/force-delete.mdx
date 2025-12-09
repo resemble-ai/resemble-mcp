@@ -1,0 +1,129 @@
+---
+title: Force Delete Phone Number
+slug: /agents/phone-numbers/force-delete
+---
+
+Force delete a corrupted phone number that failed normal deletion. This bypasses external resource cleanup.
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/phone_numbers/{id}/force
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| id | integer | The phone number ID |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/phone_numbers/1/force" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "force_deleted": true,
+  "message": "Phone number force deleted successfully. Please manually cleanup external resources if needed. See: https://docs.resemble.ai/phone-numbers/cleanup"
+}
+```
+
+## Response (Not Corrupted)
+
+```json
+{
+  "success": false,
+  "message": "Force delete is only allowed for corrupted phone numbers"
+}
+```
+
+## Response (Error)
+
+```json
+{
+  "success": false,
+  "message": "Failed to force delete phone number: Database constraint violation"
+}
+```
+
+## Validation Rules
+
+- Only phone numbers with status **"corrupted"** can be force deleted
+- Normal phone numbers must use regular [delete endpoint](/agents/phone-numbers/delete)
+
+## When to Use Force Delete
+
+Use force delete when:
+
+1. **Normal deletion failed**: Phone number is marked as "corrupted"
+2. **Twilio cleanup failed**: External resources couldn't be cleaned up automatically
+3. **Manual cleanup completed**: You've manually cleaned up Twilio resources
+4. **Database cleanup needed**: You want to remove the database record
+
+## Before Force Deleting
+
+### Step 1: Identify Corrupted Resources
+
+When a phone number becomes corrupted, note the external resources that need cleanup:
+
+- Twilio SIP Trunk SID (from phone number details)
+- Twilio Credential Lists
+- Twilio Connection Policies
+- LiveKit Trunk ID
+- LiveKit Dispatch Rule ID
+
+### Step 2: Manual Cleanup in Twilio
+
+1. Log into [Twilio Console](https://www.twilio.com/console)
+2. Navigate to **Elastic SIP Trunking** > **Trunks**
+3. Find and delete the SIP trunk (use the Trunk SID from step 1)
+4. Navigate to **Elastic SIP Trunking** > **Credential Lists**
+5. Delete any credential lists associated with the phone number
+6. Navigate to **Elastic SIP Trunking** > **IP Access Control Lists**
+7. Delete any connection policies for the phone number
+
+### Step 3: Force Delete
+
+Once manual cleanup is complete, use the force delete endpoint to remove the database record.
+
+## Important Warnings
+
+- **No automatic cleanup**: Force delete bypasses all external resource cleanup
+- **Manual cleanup required**: You must manually clean up Twilio resources before force deleting
+- **Permanent action**: Cannot be undone
+- **Orphaned resources**: If you don't manually clean up, resources may remain in Twilio (incurring costs)
+
+## Example Workflow
+
+```bash
+# 1. Attempt normal deletion
+curl --request DELETE "https://app.resemble.ai/api/v2/phone_numbers/1" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+# Response: Phone number marked as corrupted
+
+# 2. Note the Twilio Trunk SID from the error message or phone number details
+# Example: TK1234567890abcdef1234567890abcdef
+
+# 3. Manually clean up in Twilio Console
+# - Delete SIP trunk TK1234567890abcdef1234567890abcdef
+# - Delete associated credential lists
+# - Delete connection policies
+
+# 4. Force delete the database record
+curl --request DELETE "https://app.resemble.ai/api/v2/phone_numbers/1/force" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+# Response: Phone number force deleted successfully
+```
+
+## See Also
+
+- [Delete Phone Number](/agents/phone-numbers/delete) - Normal deletion process
+- [Phone Numbers Overview](/agents/phone-numbers/overview) - Phone number management overview
+- [Twilio SIP Trunking Docs](https://www.twilio.com/docs/sip-trunking) - Twilio cleanup reference

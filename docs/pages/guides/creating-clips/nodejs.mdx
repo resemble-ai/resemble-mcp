@@ -1,0 +1,115 @@
+---
+title: Node.js Clip Generator
+slug: /guides/creating-clips/nodejs
+---
+
+Build a tiny CLI that creates clips through the Resemble API.
+
+## Prerequisites
+
+- Node.js 18+
+- Resemble account and API token
+
+## 1. Initialize the project
+
+```bash
+mkdir resemble-static-audio
+cd resemble-static-audio
+npm init -y
+npm install @resemble/node
+```
+
+## 2. Configure the SDK
+
+Create `index.js`:
+
+```js
+// resemble-static-audio/index.js
+import * as Resemble from "@resemble/node";
+
+const apiKey = process.env.RESEMBLE_API_KEY;
+
+if (!apiKey) {
+  console.error("Please set the RESEMBLE_API_KEY environment variable.");
+  process.exit(1);
+}
+
+Resemble.Resemble.setApiKey(apiKey);
+```
+
+## 3. Parse CLI arguments
+
+Allow users to pass project UUID, voice UUID, title, body, and archive flag:
+
+```js
+const args = process.argv.slice(2);
+
+if (args.length !== 5) {
+  console.error(
+    "Usage: node index.js <project_uuid> <voice_uuid> <title> <body> <archived (true/false)>"
+  );
+  process.exit(1);
+}
+
+const [projectUUID, voiceUUID, title, body, isArchivedStr] = args;
+const isArchived = isArchivedStr === "true";
+
+const clipArgs = {
+  project_uuid: projectUUID,
+  voice_uuid: voiceUUID,
+  title,
+  body,
+  archived: isArchived,
+};
+```
+
+## 4. Create the clip
+
+```js
+async function createAudioClip(projectUUID, title, body, voiceUUID, isArchived = false) {
+  console.log(`Submitting request to Resemble to create audio clip: ${body}`);
+
+  try {
+    const response = await Resemble.Resemble.v2.clips.createSync(projectUUID, {
+      title,
+      voice_uuid: voiceUUID,
+      body,
+      is_archived: isArchived,
+    });
+
+    if (response.success) {
+      const clip = response.item;
+      console.log(`Created clip ${clip.uuid}`);
+      console.log(clip.audio_src);
+    } else {
+      console.error("Clip creation failed", response);
+    }
+  } catch (error) {
+    console.error("Error creating audio clip:", error);
+  }
+}
+```
+
+## 5. Wire everything together
+
+```js
+async function runExample(options) {
+  await createAudioClip(
+    options.project_uuid,
+    options.title,
+    options.body,
+    options.voice_uuid,
+    options.archived || false
+  );
+}
+
+runExample(clipArgs);
+```
+
+## 6. Run the script
+
+```bash
+RESEMBLE_API_KEY=... node index.js "PROJECT_UUID" "VOICE_UUID" "Welcome" "Welcome to the show" false
+```
+
+The output includes the clip UUID and a signed URL to download the audio. Explore the [Clips endpoints](/platform-management/clips/list) for additional operations.

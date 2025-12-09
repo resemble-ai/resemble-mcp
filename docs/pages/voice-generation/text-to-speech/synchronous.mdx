@@ -1,0 +1,97 @@
+---
+title: Synchronous
+slug: /voice-generation/text-to-speech/synchronous
+---
+
+The synchronous endpoint processes the entire input and returns a single audio payload—ideal for short prompts, notifications, or background jobs that do not require streaming.
+
+## Quick Example
+
+```bash
+curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Accept-Encoding: gzip" \
+  --data '{
+    "voice_uuid": "55592656",
+    "data": "Hello from Resemble!",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+Decode the `audio_content` field from base64 to retrieve the raw audio bytes.
+
+## Endpoint
+
+`POST https://f.cluster.resemble.ai/synthesize`
+
+### Request Headers
+
+| Header | Value | Description |
+| --- | --- | --- |
+| `Authorization` | `YOUR_API_KEY` | API key from the dashboard. |
+| `Content-Type` | `application/json` | JSON request body. |
+| `Accept-Encoding` | `gzip`, `deflate`, or `br` | Optional compression. |
+
+### Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `voice_uuid` | string | Yes | Voice to synthesize. |
+| `data` | string | Yes | Text or SSML to synthesize (≤ 2,000 characters). |
+| `project_uuid` | string | No | Project to store the clip in. |
+| `title` | string | No | Title for the generated clip. |
+| `precision` | string | No | `MULAW`, `PCM_16`, `PCM_24`, `PCM_32` (default). Applies to WAV output. |
+| `output_format` | string | No | `wav` (default) or `mp3`. |
+| `sample_rate` | number | No | `8000`, `16000`, `22050`, `32000`, `44100`, or `48000`. Defaults to `48000`. |
+
+### Response
+
+```json
+{
+  "audio_content": "<base64>",
+  "audio_timestamps": {
+    "graph_chars": ["H", "e", "l", "l", "o"],
+    "graph_times": [[0.0, 0.12], [0.12, 0.24], ...],
+    "phon_chars": [],
+    "phon_times": []
+  },
+  "duration": 1.68,
+  "issues": [],
+  "output_format": "wav",
+  "sample_rate": 48000,
+  "seed": 962692783,
+  "success": true,
+  "synth_duration": 1.64,
+  "title": null
+}
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `audio_content` | string | Base64-encoded audio bytes. |
+| `audio_timestamps` | object | Timestamp arrays for graphemes and phonemes. Grapheme timestamps (`graph_chars`, `graph_times`) are supported for all models, with times in seconds as `[start, end]` pairs. Phoneme timestamps (`phon_chars`, `phon_times`) return empty arrays for newer models and are only populated by legacy models. |
+| `duration` | number | Final clip duration in seconds. |
+| `issues` | array | Issues related to the request. |
+| `output_format` | string | Echoes the requested format. |
+| `sample_rate` | number | Echoes the requested sample rate. |
+| `seed` | number | Random seed used for generation. |
+| `success` | boolean | Whether the synthesis succeeded. |
+| `synth_duration` | number | Raw synthesis time prior to post-processing. |
+| `title` | string \| null | Title saved with the clip, or `null` if not provided. |
+
+> **Try it** – Repeat the request above and decode `audio_content` locally:
+>
+> ```bash
+> curl --request POST "https://f.cluster.resemble.ai/synthesize" \
+>   -H "Authorization: YOUR_API_KEY" \
+>   -H "Content-Type: application/json" \
+>   --data '{
+>     "voice_uuid": "55592656",
+>     "data": "Hello from Resemble!",
+>     "sample_rate": 48000,
+>     "output_format": "wav"
+>   }' \
+> | jq -r '.audio_content' | base64 --decode > output.wav
+> ```

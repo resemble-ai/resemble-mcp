@@ -1,0 +1,79 @@
+---
+title: Quick Start
+slug: /getting-started/quickstart
+---
+
+You can explore reference implementations in the [Resemble Examples](https://github.com/resemble-ai/resemble-examples) repository. For a complete streaming walk-through, check [resemble-ai/resemble-streaming-demo](https://github.com/resemble-ai/resemble-streaming-demo/).
+
+## Set Up Your Environment
+
+1. [Create a Resemble account](https://app.resemble.ai/users/sign_up) if you have not already.
+2. Generate an API key from the [Account → API](https://app.resemble.ai/account/api) page.
+3. Scaffold a Python project and install the official SDK:
+
+```bash
+pip install resemble
+```
+
+4. Authenticate and synthesize your first clip:
+
+```python
+#!/usr/bin/env python3
+"""
+Sample script demonstrating how to use the Resemble AI create_direct method.
+
+The create_direct method allows you to synthesize speech directly - this is useful for quick synthesis tasks.
+
+Requirements:
+- Resemble AI API key
+- Project UUID 
+- Voice UUID
+"""
+
+from resemble import Resemble
+
+def main():
+    # Set your API key - get this from https://app.resemble.ai/account/api
+    API_KEY = "YOUR_API_KEY"
+    
+    # Set your project and voice UUIDs
+    PROJECT_UUID = "YOUR_PROJECT_UUID"
+    VOICE_UUID = "YOUR_VOICE_UUID"
+    
+    # Initialize the Resemble client with your API key
+    Resemble.api_key(API_KEY)
+    
+    # Text to synthesize
+    data = "Hello, this is a sample text being synthesized using the create_direct method."
+
+    #Alternatively, you can pass in SSML to the data parameter.
+    #data = "<speak prompt=\"Speak in a British accent like you are from the heart of London, England.\">Hello, this is a sample text being synthesized using the create_direct endpoint.</speak>"
+    
+    try:
+        # Call the create_direct endpoint
+        response = Resemble.v2.clips.create_direct(
+            project_uuid=PROJECT_UUID, # Required: project UUID
+            voice_uuid=VOICE_UUID, # Required: voice UUID
+            data=data, # Required: text to synthesize
+            title="Direct Syn test",  # Optional: title for the synthesis
+            precision="PCM_16",              # Optional: audio precision
+            output_format="wav",             # Optional: output format
+            sample_rate=48000               # Optional: sample rate in Hz
+        )
+        
+        # - success: boolean indicating if the request was successful
+        if response.get('success'):
+            print("Synthesis successful!")
+            print(f"Response: {response}")
+            audio_content = response.get('audio_content') # Base64 encoded audio content. You can decode it to get the audio data.
+        else:
+            print("Synthesis failed")
+            print(f"Error: {response}")
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    main()
+```
+
+If you run into issues, email [support@resemble.ai](mailto:support@resemble.ai) and include request IDs, timestamps, and sample payloads when possible.

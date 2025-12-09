@@ -1,0 +1,76 @@
+---
+title: Get Detection Result
+slug: /detect/get
+---
+
+`GET https://app.resemble.ai/api/v2/detect/{uuid}`
+
+Retrieve the deepfake detection result using the provided UUID. Returns the final metrics for the detection job. Media-type-specific keys appear depending on the input.
+
+```bash
+curl --request GET 'https://app.resemble.ai/api/v2/detect/DETECT_UUID' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response Details
+
+- **`metrics`** - Always includes a `label` (fake/real), `score` array with predictions per chunk, `consistency` field (for audio/video), and `aggregated_score`
+- **`image_metrics`** - Present for still images, contains type, label, score, visualization image (if requested), and nested analysis children
+- **`video_metrics`** - Present for videos, includes nested detections across frames with timestamps, certainty scores, and hierarchical results
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "5c17d732-0d10-4ee3-8c1d-41ad9b9142a1",
+    "metrics": {
+      "label": "fake",
+      "score": ["0.9", "0.8", "0.7"],
+      "consistency": "0.85",
+      "aggregated_score": "0.566"
+    },
+    "image_metrics": {
+      "label": "fake",
+      "score": "0.9",
+      "type": "facial",
+      "image": "https://...",
+      "children": []
+    },
+    "video_metrics": {
+      "label": "Fake",
+      "score": "0.9",
+      "certainty": "0.9",
+      "treeview": "...",
+      "children": [
+        {
+          "type": "VideoResult",
+          "conclusion": "Fake",
+          "score": "0.99",
+          "certainty": "0.9",
+          "children": [
+            {
+              "type": "ImageResult",
+              "conclusion": "Fake",
+              "score": "0.9",
+              "certainty": "0.95",
+              "timestamp": "0.23",
+              "children": [
+                {
+                  "type": "Segment",
+                  "conclusion": "Fake",
+                  "score": "0.9",
+                  "certainty": "0.995"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+- `metrics` always reflects the aggregate prediction and confidence per chunk.
+- `image_metrics` appears for still images and contains visualization assets if requested.
+- `video_metrics` nests detections across frames with timestamps and certainty percentages.

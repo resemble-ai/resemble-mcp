@@ -1,0 +1,95 @@
+---
+title: Duet API
+slug: /duets/api
+---
+
+# Duet API
+
+Generate conversational audio with two speakers using preset voices, custom voice pairs, or uploaded samples.
+
+- Base URL: `https://app.resemble.ai/api/v2`
+- Authentication: `Authorization: Bearer YOUR_API_KEY`
+
+## Duet Voices
+
+### List Voices
+
+```http
+GET /duet_voices
+```
+
+Returns default and custom voices.
+
+### Create Custom Voice
+
+```http
+POST /duet_voices
+Content-Type: multipart/form-data
+```
+
+Parameters:
+- `name` (required)
+- `style_prompt` (optional)
+- `audio` (required; MP3/WAV/M4A/OGG/AAC/FLAC ≤ 10 MB)
+
+### Update/Delete Voice
+
+`PUT /duet_voices/{id}` or `DELETE /duet_voices/{id}` (default voices cannot be modified or removed).
+
+## Voice Pairs
+
+### List Pairs
+
+```http
+GET /duet_voice_pairs
+```
+
+### Create Pair
+
+```http
+POST /duet_voice_pairs
+Content-Type: application/json
+```
+
+Payload includes two voice IDs plus optional metadata.
+
+## Duet Generation
+
+```http
+POST /duet
+Content-Type: application/json
+```
+
+Example payload:
+
+```json
+{
+  "voice_pair_id": 1,
+  "script": [
+    {
+      "speaker": 0,
+      "text": "Welcome to the show!"
+    },
+    {
+      "speaker": 1,
+      "text": "Thanks for tuning in."
+    }
+  ],
+  "title": "Podcast intro",
+  "callback_uri": "https://example.com/webhooks/duet"
+}
+```
+
+The response contains a job UUID; poll for completion or rely on the callback to download the generated duet audio.
+
+## Webhooks
+
+Provide `callback_uri` on generation calls to receive status updates and signed URLs when audio is ready.
+
+## Errors & Rate Limits
+
+- `400` for malformed payloads or unsupported media
+- `401` when the token is missing or invalid
+- `429` if you exceed duet-specific throttles
+
+Contact support to enable the Duet feature on your account if the endpoints return `403`.

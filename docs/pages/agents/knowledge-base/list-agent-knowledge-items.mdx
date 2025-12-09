@@ -1,0 +1,157 @@
+---
+title: List Agent's Knowledge Items
+slug: /agents/knowledge-base/list-agent-knowledge-items
+---
+
+Lists all knowledge items attached to a specific agent.
+
+## HTTP Request
+
+```bash
+GET https://app.resemble.ai/api/v2/agents/{agent_uuid}/knowledge_items
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The UUID of the agent |
+
+## Example Request
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/agent-uuid-123/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Product FAQ",
+      "description": "FAQ content",
+      "source_type": "url",
+      "status": "ready",
+      "error_message": null,
+      "chunk_count": 15,
+      "url": "https://example.com/faq",
+      "created_at": "2025-12-01T10:00:00Z",
+      "updated_at": "2025-12-01T10:05:00Z"
+    },
+    {
+      "uuid": "660e8400-e29b-41d4-a716-446655440001",
+      "title": "Product Manual",
+      "description": "Complete product documentation",
+      "source_type": "document",
+      "status": "ready",
+      "error_message": null,
+      "chunk_count": 42,
+      "document_url": "https://storage.example.com/signed-url",
+      "document_filename": "manual.pdf",
+      "created_at": "2025-12-01T09:00:00Z",
+      "updated_at": "2025-12-01T09:15:00Z"
+    }
+  ],
+  "count": 2
+}
+```
+
+## Response Body
+
+| Attribute | Type | Description |
+| --- | --- | --- |
+| success | boolean | Indicates if the request was successful |
+| items | array | Array of knowledge item objects |
+| count | integer | Total number of knowledge items attached to this agent |
+| uuid | string | Unique identifier for the knowledge item |
+| title | string | Display title (max 50 chars) |
+| description | string | Description (max 200 chars) |
+| source_type | string | Source type: `document`, `url`, or `text` |
+| status | string | Status: `pending`, `processing`, `ready`, or `failed` |
+| error_message | string | Error details if status is `failed` (null otherwise) |
+| chunk_count | integer | Number of chunks created (null until processed) |
+| url | string | Source URL (only for `url` type) |
+| document_url | string | Signed URL to download document (only for `document` type, expires after 1 hour) |
+| document_filename | string | Original filename (only for `document` type) |
+| created_at | string | ISO8601 timestamp of creation |
+| updated_at | string | ISO8601 timestamp of last update |
+
+## Error Response (Agent Not Found)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Agent not found"]
+  },
+  "message": "Failed to retrieve knowledge items"
+}
+```
+
+## Use Cases
+
+### Check Agent's Knowledge
+
+View all knowledge items that an agent can access during conversations:
+
+```bash
+curl --request GET "https://app.resemble.ai/api/v2/agents/support-agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Audit Knowledge Access
+
+Determine which knowledge sources an agent is using for RAG retrieval:
+
+```bash
+# Get all knowledge items for the agent
+curl --request GET "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Verify Attachments
+
+After attaching knowledge items, confirm they're properly linked:
+
+```bash
+# After calling attach endpoint, verify with list
+curl --request GET "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+## Filtering Results
+
+This endpoint returns all knowledge items attached to the agent. To filter:
+
+- **By Status**: Filter client-side based on the `status` field
+- **By Source Type**: Filter client-side based on the `source_type` field
+- **Ready Items Only**: Filter for items with `status: "ready"` for active knowledge
+
+## Knowledge Item Status
+
+Only knowledge items with `status: "ready"` are actively used by the agent for RAG retrieval:
+
+- **ready**: Agent can retrieve chunks from this knowledge item
+- **pending/processing**: Agent cannot use this item yet (waiting for ingestion)
+- **failed**: Agent cannot use this item (ingestion failed)
+
+## RAG Configuration
+
+The agent's RAG behavior is controlled by agent-level settings:
+
+- **search_mode**: Controls retrieval strategy (`"speed"` or `"accuracy"`)
+- **max_chunks_per_query**: Number of chunks to retrieve per query
+
+View these settings via [Get Agent](/agents/get) with `advanced=true` query parameter.
+
+## See Also
+
+- [Attach Knowledge Item to Agent](/agents/knowledge-base/attach) - Add knowledge to an agent
+- [Detach Knowledge Item from Agent](/agents/knowledge-base/detach) - Remove knowledge from an agent
+- [Get Agent](/agents/get) - View agent's RAG configuration
+- [Update Agent](/agents/update) - Modify RAG settings

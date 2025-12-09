@@ -1,0 +1,87 @@
+---
+title: Python Streaming Example
+slug: /guides/creating-clips/websocket-streaming/python-example
+---
+
+```python
+import asyncio
+import base64
+import json
+import os
+import time
+
+import pyaudio
+import websockets
+from dotenv import load_dotenv
+
+load_dotenv()
+
+API_KEY = os.getenv("RESEMBLE_API_KEY")
+STREAMING_URL = "wss://websocket.cluster.resemble.ai/stream"
+VOICE_UUID = "<voice_uuid>"
+
+p = pyaudio.PyAudio()
+stream = p.open(
+    format=pyaudio.paInt16,
+    channels=1,
+    rate=48000,
+    output=True,
+)
+
+async def connect_websocket():
+    return await websockets.connect(
+        STREAMING_URL,
+        extra_headers={"Authorization": f"Bearer {API_KEY}"},
+        ping_interval=5,
+        ping_timeout=10,
+    )
+
+async def listen():
+    while True:
+        websocket = None
+        try:
+            websocket = await connect_websocket()
+            while True:
+                text = input("Text: ")
+                if not text:
+                    await websocket.ping()
+                    continue
+
+                request = {
+                    "voice_uuid": VOICE_UUID,
+                    "data": text,
+                    "precision": "PCM_16",
+                    "no_audio_header": True,
+                    "sample_rate": 48000,
+                }
+                await websocket.send(json.dumps(request))
+
+                first_chunk = True
+                start = time.time()
+
+                while True:
+                    message = await websocket.recv()
+                    data = json.loads(message)
+
+                    if data["type"] == "audio":
+                        audio = base64.b64decode(data["audio_content"])
+                        if first_chunk:
+                            print(f"TTFS: {time.time() - start:.3f}s")
+                            first_chunk = False
+                        stream.write(audio)
+
+                    if data["type"] == "audio_end":
+                        break
+        except websockets.exceptions.ConnectionClosedError:
+            print("Connection closed. Reconnecting...")
+        except Exception as exc:
+            print(f"Error: {exc}")
+        finally:
+            if websocket:
+                await websocket.close()
+            await asyncio.sleep(1)
+
+asyncio.get_event_loop().run_until_complete(listen())
+```
+
+Replace `<voice_uuid>` with a streaming-enabled voice. This example prints time-to-first-sound (TTFS) and plays PCM chunks via PyAudio. Adjust buffer handling or output device configuration to suit your environment.

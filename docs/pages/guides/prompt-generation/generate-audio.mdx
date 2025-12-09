@@ -1,0 +1,45 @@
+---
+title: Generate Audio
+slug: /guides/prompt-generation/generate-audio
+---
+
+This example uses the prebuilt voice **Ember** (`voice_uuid = 55592656`) and the prompt `Speak in an excited, upbeat tone`.
+
+```bash
+curl --request POST 'https://f.cluster.resemble.ai/synthesize' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -H 'Accept-Encoding: gzip' \
+  --data '{
+    "voice_uuid": "55592656",
+    "data": "<speak prompt=\"Speak in an excited, upbeat tone\">Hello from Resemble!</speak>",
+    "sample_rate": 48000,
+    "output_format": "wav"
+  }'
+```
+
+Response:
+
+```json
+{
+  "audio_content": "... base64 ...",
+  "audio_timestamps": {
+    "graph_chars": [],
+    "graph_times": [],
+    "phon_chars": [],
+    "phon_times": []
+  },
+  "duration": 1.84,
+  "output_format": "wav",
+  "sample_rate": 48000,
+  "success": true
+}
+```
+
+Decode `audio_content` or download `audio_src` (if present) to listen.
+
+## Next Steps
+
+- Try alternative prompts to explore different deliveries.
+- Pair prompts with custom voices from [Voice Design](/guides/voice-design/how-to-create).
+- Review the [Text-to-Speech reference](/voice-generation/text-to-speech/synchronous) for additional parameters.

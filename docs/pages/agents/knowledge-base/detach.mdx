@@ -1,0 +1,250 @@
+---
+title: Detach Knowledge Item from Agent
+slug: /agents/knowledge-base/detach
+---
+
+Removes a knowledge item from an agent. The knowledge item itself is not deleted and remains available for other agents.
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/agents/{agent_uuid}/knowledge_items/{knowledge_item_uuid}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The UUID of the agent |
+| knowledge_item_uuid | string | The UUID of the knowledge item to detach |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/agent-uuid-123/knowledge_items/550e8400-e29b-41d4-a716-446655440000" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "items": [],
+  "message": "Knowledge item detached successfully"
+}
+```
+
+## Response (Success with Remaining Items)
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "uuid": "660e8400-e29b-41d4-a716-446655440001",
+      "title": "Product Manual",
+      "description": "Complete product documentation",
+      "source_type": "document",
+      "status": "ready",
+      "error_message": null,
+      "chunk_count": 42,
+      "document_url": "https://storage.example.com/signed-url",
+      "document_filename": "manual.pdf",
+      "created_at": "2025-12-01T09:00:00Z",
+      "updated_at": "2025-12-01T09:15:00Z"
+    }
+  ],
+  "message": "Knowledge item detached successfully"
+}
+```
+
+## Error Response (Not Attached)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item_uuid": [{ "error": "not_attached", "message": "Knowledge item is not attached to this agent" }]
+  },
+  "message": "Failed to detach knowledge item"
+}
+```
+
+## Error Response (Not Found)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["Agent or knowledge item not found"]
+  },
+  "message": "Failed to detach knowledge item"
+}
+```
+
+## Detachment Behavior
+
+### Immediate Effect
+
+Once detached, the agent immediately stops using the knowledge item:
+
+1. **RAG Retrieval**: Agent no longer searches this knowledge item during queries
+2. **Context Exclusion**: Chunks from this item are excluded from LLM prompts
+3. **No Data Deletion**: The knowledge item itself is not deleted
+
+### Knowledge Item Preservation
+
+The knowledge item remains intact after detachment:
+
+- Still exists in the team's knowledge items
+- Can be attached to other agents
+- Can be re-attached to the same agent later
+- No need to re-process
+
+### Multiple Agents
+
+If the knowledge item is attached to multiple agents:
+
+- Only the specified agent is affected
+- Other agents continue using the knowledge item
+- Each agent-knowledge item relationship is independent
+
+## Use Cases
+
+### Temporary Removal
+
+Temporarily disable knowledge without deleting:
+
+```bash
+# Remove outdated FAQ during update
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/support-agent/knowledge_items/old-faq-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Later, re-attach updated FAQ
+curl --request POST "https://app.resemble.ai/api/v2/agents/support-agent/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "new-faq-uuid"}'
+```
+
+### Agent Specialization
+
+Remove general knowledge from specialized agents:
+
+```bash
+# Billing agent doesn't need technical documentation
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/billing-agent/knowledge_items/tech-docs-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+### Knowledge Rotation
+
+Swap knowledge items for different use cases:
+
+```bash
+# Remove general product info
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/sales-agent/knowledge_items/general-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Add detailed pricing info
+curl --request POST "https://app.resemble.ai/api/v2/agents/sales-agent/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "pricing-uuid"}'
+```
+
+### Troubleshooting
+
+Remove problematic knowledge temporarily:
+
+```bash
+# Knowledge item causing irrelevant responses
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items/problematic-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Test agent without the knowledge item
+# Fix or replace the knowledge item
+# Re-attach when ready
+```
+
+## Detach vs Delete
+
+### Detach (This Endpoint)
+
+- Removes knowledge item from specific agent
+- Knowledge item remains in team's collection
+- Other agents can still use it
+- Can be re-attached later without re-processing
+- Use when: Temporarily disabling or reorganizing knowledge
+
+### Delete ([Delete Knowledge Item](/agents/knowledge-base/delete))
+
+- Permanently removes knowledge item from team
+- Automatically detaches from all agents
+- All chunks and embeddings are deleted
+- Cannot be recovered
+- Use when: Knowledge is no longer needed by any agent
+
+## Workflow Example
+
+Complete workflow to swap knowledge items:
+
+```bash
+# Step 1: Check current knowledge items
+curl --request GET "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Response shows current items
+
+# Step 2: Detach old knowledge item
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items/old-uuid" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Response: { "success": true, "message": "Knowledge item detached successfully" }
+
+# Step 3: Attach new knowledge item
+curl --request POST "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "new-uuid"}'
+
+# Response: { "success": true, "message": "Knowledge item attached successfully" }
+
+# Step 4: Verify new configuration
+curl --request GET "https://app.resemble.ai/api/v2/agents/agent-uuid/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+```
+
+## Error Codes
+
+| Error Code | Description |
+| --- | --- |
+| not_attached | Knowledge item not attached to this agent |
+| not_found | Agent or knowledge item not found |
+
+## Best Practices
+
+### Before Detaching
+
+1. **Check Attachments**: Use [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items) to confirm attachment
+2. **Consider Impact**: Understand how removal affects agent responses
+3. **Plan Replacement**: Have alternative knowledge ready if needed
+
+### After Detaching
+
+1. **Verify Removal**: Use [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items) to confirm
+2. **Test Agent**: Verify agent behavior without the knowledge item
+3. **Monitor Responses**: Check that agent no longer references removed knowledge
+
+### Knowledge Management
+
+- Detach before deleting if you want to confirm impact
+- Keep detached items for potential future use
+- Document why knowledge items were detached
+- Regular audit of attached vs available knowledge
+
+## See Also
+
+- [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items) - View attached knowledge
+- [Attach Knowledge Item to Agent](/agents/knowledge-base/attach) - Add knowledge to agent
+- [Delete Knowledge Item](/agents/knowledge-base/delete) - Permanently remove knowledge
+- [Get Agent](/agents/get) - View agent configuration

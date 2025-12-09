@@ -1,0 +1,49 @@
+---
+title: Generate Voice Candidates
+slug: /voice-creation/voice-design/generate
+---
+
+`POST https://app.resemble.ai/api/v2/voice-design`
+
+Generate voice candidates based on a text prompt describing desired voice characteristics.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `user_prompt` | string | ✅ | Description of desired voice (e.g., "A warm, friendly female voice with a British accent"). |
+| `is_voice_design_trial` | boolean | ❌ | Whether this is a trial generation. Default: true. |
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/voice-design' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "user_prompt": "A warm, friendly female voice with a British accent",
+    "is_voice_design_trial": true
+  }'
+```
+
+```json
+{
+  "voice_candidates": {
+    "voice_design_model_uuid": "VOICE_DESIGN_UUID",
+    "samples": [
+      {
+        "audio_url": "https://...",
+        "sample_index": 0
+      },
+      {
+        "audio_url": "https://...",
+        "sample_index": 1
+      },
+      {
+        "audio_url": "https://...",
+        "sample_index": 2
+      }
+    ]
+  }
+}
+```
+
+<Note>
+Free users are limited to one trial. Processing is synchronous. Returns multiple voice samples to choose from. Audio URLs expire in 4 hours.
+</Note>

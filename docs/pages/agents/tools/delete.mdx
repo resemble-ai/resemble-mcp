@@ -1,0 +1,60 @@
+---
+title: Delete Tool
+slug: /agents/tools/delete
+---
+
+Delete a tool from an agent.
+
+## HTTP Request
+
+```bash
+DELETE https://app.resemble.ai/api/v2/agents/{agent_uuid}/tools/{id}
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The agent's UUID |
+| id | integer | The tool ID |
+
+## Example Request
+
+```bash
+curl --request DELETE "https://app.resemble.ai/api/v2/agents/550e8400-e29b-41d4-a716-446655440000/tools/1" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json"
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "message": "Tool deleted successfully"
+}
+```
+
+## Response (System Tool Error)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "base": ["System tools cannot be deleted"]
+  },
+  "message": "Cannot delete system tool"
+}
+```
+
+## Validation Rules
+
+- System tools cannot be deleted (they can only be disabled via [update](/agents/tools/update))
+- Only webhook and client tools can be deleted
+- Deletion is permanent and cannot be undone
+
+## See Also
+
+- [Update Tool](/agents/tools/update) - Disable system tools instead of deleting
+- [Create Tool](/agents/tools/create) - Create new tools
+- [Get System Tools](/agents/system-tools) - View available system tools

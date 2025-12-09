@@ -1,0 +1,252 @@
+---
+title: Attach Knowledge Item to Agent
+slug: /agents/knowledge-base/attach
+---
+
+Attaches an existing knowledge item to an agent. The knowledge item must have `status: "ready"` to be attached.
+
+## HTTP Request
+
+```bash
+POST https://app.resemble.ai/api/v2/agents/{agent_uuid}/knowledge_items
+```
+
+## URL Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| agent_uuid | string | The UUID of the agent |
+
+## Request Body
+
+| Attribute | Type | Required | Description |
+| --- | --- | --- | --- |
+| knowledge_item_uuid | string | Yes | The UUID of the knowledge item to attach |
+
+## Example Request
+
+```bash
+curl --request POST "https://app.resemble.ai/api/v2/agents/agent-uuid-123/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "knowledge_item_uuid": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+## Response (Success)
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "uuid": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Product FAQ",
+      "description": "FAQ content",
+      "source_type": "url",
+      "status": "ready",
+      "error_message": null,
+      "chunk_count": 15,
+      "url": "https://example.com/faq",
+      "created_at": "2025-12-01T10:00:00Z",
+      "updated_at": "2025-12-01T10:05:00Z"
+    }
+  ],
+  "message": "Knowledge item attached successfully"
+}
+```
+
+## Error Response (Not Ready)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item_uuid": [{ "error": "not_ready", "message": "Knowledge item must be successfully ingested before attaching" }]
+  },
+  "message": "Failed to attach knowledge item"
+}
+```
+
+## Error Response (Already Attached)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item_uuid": [{ "error": "already_attached", "message": "Knowledge item is already attached to this agent" }]
+  },
+  "message": "Failed to attach knowledge item"
+}
+```
+
+## Error Response (Not Found)
+
+```json
+{
+  "success": false,
+  "errors": {
+    "knowledge_item_uuid": [{ "error": "not_found", "message": "Knowledge item not found" }]
+  },
+  "message": "Failed to attach knowledge item"
+}
+```
+
+## Validation Rules
+
+### Status Requirements
+
+- Knowledge item must have `status: "ready"`
+- Cannot attach items with status: `pending`, `processing`, or `failed`
+- Wait for ingestion to complete before attaching
+
+### Attachment Uniqueness
+
+- A knowledge item can only be attached once per agent
+- The same knowledge item can be attached to multiple agents
+- Attempting to attach an already-attached item returns an error
+
+### Access Permissions
+
+- Both the agent and knowledge item must belong to the authenticated team
+- Cannot attach knowledge items from other teams
+
+## Attachment Behavior
+
+### Immediate Availability
+
+Once attached, the agent can immediately use the knowledge item for RAG retrieval:
+
+1. **Query Processing**: When the agent receives a user query, it searches attached knowledge items
+2. **Chunk Retrieval**: Relevant chunks are retrieved based on semantic similarity
+3. **Context Injection**: Retrieved chunks are injected into the LLM prompt
+4. **Response Generation**: LLM generates response with knowledge context
+
+### Multiple Knowledge Items
+
+Agents can have multiple knowledge items attached:
+
+- All attached knowledge items are searched during RAG retrieval
+- The `max_chunks_per_query` setting applies across all knowledge items
+- Most relevant chunks are selected regardless of source
+
+### RAG Configuration
+
+Attachment uses the agent's RAG configuration:
+
+- **search_mode**: `"speed"` (faster) or `"accuracy"` (more thorough)
+- **max_chunks_per_query**: Number of chunks to retrieve (default: 8)
+
+Configure via [Update Agent](/agents/update).
+
+## Workflow Example
+
+Complete workflow to add knowledge to an agent:
+
+```bash
+# Step 1: Create knowledge item
+curl --request POST "https://app.resemble.ai/api/v2/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "title": "Company FAQ",
+    "description": "Frequently asked questions",
+    "source_type": "url",
+    "url": "https://example.com/faq"
+  }'
+
+# Response: { "item": { "uuid": "550e8400...", "status": "pending" } }
+
+# Step 2: Poll for ready status
+curl --request GET "https://app.resemble.ai/api/v2/knowledge_items/550e8400..." \
+  -H "Authorization: Bearer YOUR_API_TOKEN"
+
+# Wait until: { "item": { "status": "ready" } }
+
+# Step 3: Attach to agent
+curl --request POST "https://app.resemble.ai/api/v2/agents/agent-uuid-123/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "knowledge_item_uuid": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+
+# Response: { "success": true, "message": "Knowledge item attached successfully" }
+```
+
+## Use Cases
+
+### Support Agent Knowledge
+
+Attach company knowledge to support agents:
+
+```bash
+# Attach FAQ, policies, and product docs
+curl --request POST "https://app.resemble.ai/api/v2/agents/support-agent/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "faq-uuid"}'
+
+curl --request POST "https://app.resemble.ai/api/v2/agents/support-agent/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "policies-uuid"}'
+```
+
+### Sales Agent Knowledge
+
+Attach product information to sales agents:
+
+```bash
+# Attach product catalog and pricing
+curl --request POST "https://app.resemble.ai/api/v2/agents/sales-agent/knowledge_items" \
+  -H "Authorization: Bearer YOUR_API_TOKEN" \
+  --data '{"knowledge_item_uuid": "catalog-uuid"}'
+```
+
+### Shared Knowledge
+
+Share knowledge across multiple agents:
+
+```bash
+# Attach same FAQ to multiple agents
+for agent in support-agent sales-agent billing-agent; do
+  curl --request POST "https://app.resemble.ai/api/v2/agents/$agent/knowledge_items" \
+    -H "Authorization: Bearer YOUR_API_TOKEN" \
+    --data '{"knowledge_item_uuid": "company-faq-uuid"}'
+done
+```
+
+## Error Codes
+
+| Error Code | Description |
+| --- | --- |
+| not_ready | Knowledge item must be `ready` status to attach |
+| already_attached | Knowledge item already attached to this agent |
+| not_found | Knowledge item or agent not found |
+
+## Best Practices
+
+### Before Attaching
+
+1. **Verify Status**: Check that knowledge item has `status: "ready"`
+2. **Test Quality**: Review chunk quality via [Get Knowledge Item](/agents/knowledge-base/get)
+3. **Configure RAG**: Set appropriate `search_mode` and `max_chunks_per_query`
+
+### After Attaching
+
+1. **Verify Attachment**: Use [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items)
+2. **Test Retrieval**: Test agent with queries that should match knowledge
+3. **Monitor Performance**: Adjust RAG settings based on response quality
+
+### Knowledge Organization
+
+- Group related knowledge items (e.g., all product docs together)
+- Avoid overlapping content across multiple knowledge items
+- Keep knowledge items focused and well-scoped
+
+## See Also
+
+- [List Agent's Knowledge Items](/agents/knowledge-base/list-agent-knowledge-items) - View attached knowledge
+- [Detach Knowledge Item from Agent](/agents/knowledge-base/detach) - Remove knowledge from agent
+- [Get Knowledge Item](/agents/knowledge-base/get) - Check knowledge item status
+- [Update Agent](/agents/update) - Configure RAG settings

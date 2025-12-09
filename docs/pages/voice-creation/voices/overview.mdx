@@ -1,0 +1,41 @@
+---
+title: Voice Resource
+slug: /voice-creation/voices
+---
+
+A voice represents a cloned persona that powers synthesis across synchronous, streaming, and speech-to-speech flows. Every clip you generate references a voice UUID.
+
+## Schema
+
+```ts
+interface Voice {
+  uuid: string;
+  name: string;
+  status: string;
+  default_language: string;
+  supported_languages: string[];
+  voice_type: string;
+  dataset_url?: string;
+  callback_uri?: string;
+  component_status: VoiceComponentStatus;
+  api_support: VoiceApiSupport;
+  source: string;
+  created_at: string; // ISO 8601
+  updated_at: string; // ISO 8601
+}
+
+interface VoiceComponentStatus {
+  text_to_speech: string;
+  speech_to_speech: string;
+  fill: string;
+}
+
+interface VoiceApiSupport {
+  sync: boolean;
+  async: boolean;
+  direct_synthesis: boolean;
+  streaming: boolean;
+}
+```
+
+Use the endpoints below to list, create, build, and delete voices.
