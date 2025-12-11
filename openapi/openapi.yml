@@ -1,0 +1,4031 @@
+openapi: 3.0.3
+info:
+  title: Resemble AI API
+  description: |
+    Resemble AI provides a comprehensive platform for voice generation, real-time agents, safety & detection, and voice management.
+    
+    ## Authentication
+    All API requests require Bearer token authentication using your API key.
+    Get your API key from https://app.resemble.ai/account/api
+    
+    ## Base URLs
+    - Main API: `https://app.resemble.ai/api/v2`
+    - Synthesis API: `https://f.cluster.resemble.ai`
+    - WebSocket Streaming: `wss://websocket.cluster.resemble.ai`
+  version: 2.0.0
+  contact:
+    name: Resemble AI Support
+    url: https://www.resemble.ai
+    email: support@resemble.ai
+
+servers:
+  - url: https://app.resemble.ai/api/v2
+    description: Main API Server
+    x-fern-server-name: production
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Text-to-Speech
+    description: Generate speech from text or SSML
+  - name: Speech-to-Speech
+    description: Convert donor recordings to target voices
+  - name: Speech-to-Text
+    description: Transcribe audio and video files
+  - name: Audio Edit
+    description: Edit audio segments using voice synthesis
+  - name: Audio Enhancement
+    description: Enhance audio quality
+  - name: Agents
+    description: Manage real-time voice agents
+  - name: Agent Tools
+    description: Manage agent tools and capabilities
+  - name: Agent Webhooks
+    description: Manage agent webhooks for pre-call and post-call integrations
+  - name: Agent Phone Numbers
+    description: Manage phone numbers for agents
+  - name: Agent Knowledge Base
+    description: Manage knowledge items and RAG support for agents
+  - name: Deepfake Detection
+    description: Deepfake detection
+  - name: Intelligence
+    description: Analyze audio, image, and video for insights
+  - name: Identity
+    description: Identity management for speaker verification
+  - name: Watermark
+    description: Apply and detect audio watermarks
+  - name: Voices
+    description: Manage and create voices
+  - name: Voice Design
+    description: Generate voices from text prompts
+  - name: Recordings
+    description: Manage voice training recordings
+  - name: Projects
+    description: Manage projects and organize clips
+  - name: Clips
+    description: Manage generated audio clips
+  - name: Term Substitutions
+    description: Manage pronunciation substitutions
+  - name: Voice Settings Presets
+    description: Manage voice configuration presets
+  - name: Account
+    description: Account and billing information
+  - name: Duets
+    description: Generate conversational audio with two speakers
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: API token from https://app.resemble.ai/account/api
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: "Error message"
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+        message:
+          type: string
+
+    AudioTimestamps:
+      type: object
+      properties:
+        graph_chars:
+          type: array
+          items:
+            type: string
+          description: Grapheme characters
+        graph_times:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+          description: Grapheme timestamps [start, end] in seconds
+        phon_chars:
+          type: array
+          items:
+            type: string
+          description: Phoneme characters
+        phon_times:
+          type: array
+          items:
+            type: array
+            items:
+              type: number
+          description: Phoneme timestamps [start, end] in seconds
+
+paths:
+  /synthesize:
+    post:
+      tags:
+        - Text-to-Speech
+      summary: Synchronous text-to-speech synthesis
+      description: Generate speech synchronously from text or SSML. Returns complete audio as base64.
+      operationId: synthesize
+      servers:
+        - url: https://f.cluster.resemble.ai
+          x-fern-server-name: synthesis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - voice_uuid
+                - data
+              properties:
+                voice_uuid:
+                  type: string
+                  description: Voice UUID to use for synthesis
+                  example: "55592656"
+                project_uuid:
+                  type: string
+                  description: Optional project UUID to store the clip
+                title:
+                  type: string
+                  description: Optional title for the generated clip
+                data:
+                  type: string
+                  description: Text or SSML to synthesize (max 3,000 characters)
+                  example: "Hello from Resemble!"
+                precision:
+                  type: string
+                  enum: [MULAW, PCM_16, PCM_24, PCM_32]
+                  default: PCM_32
+                  description: Audio precision for WAV output
+                output_format:
+                  type: string
+                  enum: [wav, mp3]
+                  default: wav
+                  description: Audio output format
+                sample_rate:
+                  type: integer
+                  enum: [8000, 16000, 22050, 32000, 44100, 48000]
+                  default: 22050
+                  description: Audio sample rate in Hz
+      responses:
+        '200':
+          description: Successful synthesis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  audio_content:
+                    type: string
+                    format: byte
+                    description: Base64-encoded audio bytes
+                  audio_timestamps:
+                    $ref: '#/components/schemas/AudioTimestamps'
+                  duration:
+                    type: number
+                    format: float
+                    description: Audio duration in seconds
+                  synth_duration:
+                    type: number
+                    format: float
+                    description: Raw synthesis time
+                  output_format:
+                    type: string
+                    example: "wav"
+                  sample_rate:
+                    type: integer
+                    example: 48000
+                  title:
+                    type: string
+                  issues:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /speech-to-text:
+    post:
+      tags:
+        - Speech-to-Text
+      summary: Create transcript job
+      description: Submit audio or video for transcription
+      operationId: createTranscript
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio or video file (max 500 MB, 20 minutes)
+                query:
+                  type: string
+                  description: Optional intelligence question to evaluate after transcription
+          application/json:
+            schema:
+              type: object
+              properties:
+                audio_token:
+                  type: string
+                  description: Signed ActiveStorage token
+                url:
+                  type: string
+                  format: uri
+                  description: HTTPS URL to audio/video file
+                query:
+                  type: string
+                  description: Optional intelligence question
+      responses:
+        '200':
+          description: Transcript job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    get:
+      tags:
+        - Speech-to-Text
+      summary: List transcripts
+      description: Retrieve paginated list of transcript jobs
+      operationId: listTranscripts
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 25
+      responses:
+        '200':
+          description: List of transcripts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          format: uuid
+                        status:
+                          type: string
+                        duration_seconds:
+                          type: number
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                  meta:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      total_pages:
+                        type: integer
+                      total_items:
+                        type: integer
+
+  /speech-to-text/{uuid}:
+    get:
+      tags:
+        - Speech-to-Text
+      summary: Get transcript
+      description: Retrieve transcript status, text, and timestamps
+      operationId: getTranscript
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Transcript details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                      text:
+                        type: string
+                      words:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            text:
+                              type: string
+                            start_time:
+                              type: number
+                            end_time:
+                              type: number
+                            speaker_id:
+                              type: string
+                      duration_seconds:
+                        type: number
+                      file_url:
+                        type: string
+                        format: uri
+                      query:
+                        type: string
+                      answer:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+
+  /speech-to-text/{uuid}/ask:
+    post:
+      tags:
+        - Speech-to-Text
+      summary: Ask intelligence question
+      description: Submit a question about a completed transcript
+      operationId: askTranscriptQuestion
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Question to ask about the transcript
+                  example: "What action items were mentioned?"
+      responses:
+        '200':
+          description: Question submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      transcript_uuid:
+                        type: string
+                        format: uuid
+                      query:
+                        type: string
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+
+  /speech-to-text/{uuid}/questions:
+    get:
+      tags:
+        - Speech-to-Text
+      summary: List intelligence questions
+      description: List all questions asked about a transcript
+      operationId: listTranscriptQuestions
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 25
+            maximum: 50
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          format: uuid
+                        query:
+                          type: string
+                        answer:
+                          type: string
+                        status:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                  meta:
+                    type: object
+
+  /speech-to-text/{uuid}/questions/{question_uuid}:
+    get:
+      tags:
+        - Speech-to-Text
+      summary: Get intelligence question status
+      description: Check the status of a specific question
+      operationId: getTranscriptQuestion
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: question_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Question details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      transcript_uuid:
+                        type: string
+                        format: uuid
+                      query:
+                        type: string
+                      answer:
+                        type: string
+                      status:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+
+  /edit:
+    post:
+      tags:
+        - Audio Edit
+      summary: Create audio edit
+      description: Edit audio segments using voice synthesis
+      operationId: createAudioEdit
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - input_audio
+                - original_transcript
+                - target_transcript
+                - voice_uuid
+              properties:
+                input_audio:
+                  type: string
+                  format: binary
+                  description: WAV, MP3, M4A, or WMA file (< 20 seconds)
+                original_transcript:
+                  type: string
+                  description: Accurate transcript of the uploaded audio
+                target_transcript:
+                  type: string
+                  description: Desired replacement text
+                voice_uuid:
+                  type: string
+                  description: Voice used to render the edited segment
+      responses:
+        '200':
+          description: Edit job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      voice_uuid:
+                        type: string
+                      original_transcript:
+                        type: string
+                      target_transcript:
+                        type: string
+                      input_audio_url:
+                        type: string
+                        format: uri
+    
+    get:
+      tags:
+        - Audio Edit
+      summary: List audio edits
+      description: Retrieve paginated list of audio edits
+      operationId: listAudioEdits
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+      responses:
+        '200':
+          description: List of audio edits
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /edit/{audio_edit_uuid}:
+    get:
+      tags:
+        - Audio Edit
+      summary: Get audio edit
+      description: Get status and result of an audio edit
+      operationId: getAudioEdit
+      parameters:
+        - name: audio_edit_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Audio edit details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      voice_uuid:
+                        type: string
+                      original_transcript:
+                        type: string
+                      target_transcript:
+                        type: string
+                      input_audio_url:
+                        type: string
+                        format: uri
+                      result_audio_url:
+                        type: string
+                        format: uri
+
+  /audio_enhancements:
+    post:
+      tags:
+        - Audio Enhancement
+      summary: Create audio enhancement
+      description: Enhance audio quality
+      operationId: createAudioEnhancement
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - audio_file
+              properties:
+                audio_file:
+                  type: string
+                  format: binary
+                  description: MP3 or WAV file (max 150 MB)
+                enhancement_level:
+                  type: number
+                  format: float
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 1.0
+                loudness_target_level:
+                  type: integer
+                  minimum: -70
+                  maximum: -5
+                  default: -14
+                  description: LUFS
+                loudness_peak_limit:
+                  type: integer
+                  minimum: -9
+                  maximum: 0
+                  default: -1
+                  description: dBTP
+      responses:
+        '200':
+          description: Enhancement job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  uuid:
+                    type: string
+                  status:
+                    type: string
+    
+    get:
+      tags:
+        - Audio Enhancement
+      summary: List audio enhancements
+      description: Retrieve paginated list of audio enhancements
+      operationId: listAudioEnhancements
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of enhancements
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /audio_enhancements/{enhancement_uuid}:
+    get:
+      tags:
+        - Audio Enhancement
+      summary: Get audio enhancement
+      description: Get status and result of an audio enhancement
+      operationId: getAudioEnhancement
+      parameters:
+        - name: enhancement_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Enhancement details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  uuid:
+                    type: string
+                  status:
+                    type: string
+                    enum: [processing, completed, failed]
+                  enhanced_audio_url:
+                    type: string
+                    format: uri
+                  error_message:
+                    type: string
+                    nullable: true
+
+  /agents:
+    get:
+      tags:
+        - Agents
+      summary: List agents
+      description: Retrieve all agents for the authenticated team
+      operationId: listAgents
+      parameters:
+        - name: phone_number
+          in: query
+          schema:
+            type: string
+          description: Filter by associated phone number
+        - name: advanced
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include detailed configuration
+      responses:
+        '200':
+          description: List of agents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+    
+    post:
+      tags:
+        - Agents
+      summary: Create agent
+      description: Create a new voice agent
+      operationId: createAgent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - voice_uuid
+              properties:
+                name:
+                  type: string
+                voice_uuid:
+                  type: string
+                phone_number_id:
+                  type: integer
+                languages:
+                  type: array
+                  items:
+                    type: string
+                  default: ["en-US"]
+                dynamic_variables:
+                  type: object
+                  additionalProperties:
+                    oneOf:
+                      - type: string
+                      - type: number
+                      - type: boolean
+                asr:
+                  type: object
+                  properties:
+                    model:
+                      type: string
+                    provider:
+                      type: string
+                      default: "deepgram"
+                    user_input_audio_format:
+                      type: string
+                      enum: [pcm_8000, pcm_16000, pcm_22050, pcm_24000, pcm_44100, pcm_48000, ulaw_8000]
+                      default: "pcm_16000"
+                    keywords:
+                      type: array
+                      items:
+                        type: string
+                turn:
+                  type: object
+                  properties:
+                    turn_timeout:
+                      type: integer
+                      minimum: 0
+                      default: 7
+                    silence_end_call_timeout:
+                      type: integer
+                      minimum: -1
+                      default: -1
+                    mode:
+                      type: string
+                      enum: [silence]
+                      default: "silence"
+                llm:
+                  type: object
+                  properties:
+                    prompt:
+                      type: string
+                    provider:
+                      type: string
+                    model:
+                      type: string
+                    reasoning_effort:
+                      type: string
+                      nullable: true
+                    temperature:
+                      type: number
+                      format: float
+                      default: 0.3
+                    timezone:
+                      type: string
+                      nullable: true
+                    built_in_tools:
+                      type: object
+                search_mode:
+                  type: string
+                  enum: [speed, accuracy]
+                  default: "accuracy"
+                  description: RAG search strategy - speed (faster) or accuracy (more thorough)
+                max_chunks_per_query:
+                  type: integer
+                  minimum: 1
+                  default: 8
+                  description: Number of relevant chunks to retrieve per query for RAG
+                webhooks:
+                  type: array
+                  items:
+                    type: object
+                system_tools:
+                  type: object
+      responses:
+        '200':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /agents/{uuid}:
+    get:
+      tags:
+        - Agents
+      summary: Get agent
+      description: Retrieve a specific agent's details
+      operationId: getAgent
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: advanced
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Agent details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    patch:
+      tags:
+        - Agents
+      summary: Update agent
+      description: Update an existing agent's configuration
+      operationId: updateAgent
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                voice_uuid:
+                  type: string
+                phone_number_id:
+                  type: integer
+                languages:
+                  type: array
+                  items:
+                    type: string
+                dynamic_variables:
+                  type: object
+                asr:
+                  type: object
+                turn:
+                  type: object
+                llm:
+                  type: object
+                search_mode:
+                  type: string
+                  enum: [speed, accuracy]
+                  description: RAG search strategy
+                max_chunks_per_query:
+                  type: integer
+                  minimum: 1
+                  description: Number of chunks to retrieve per query for RAG
+                webhooks:
+                  type: array
+                system_tools:
+                  type: object
+      responses:
+        '200':
+          description: Agent updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+    
+    delete:
+      tags:
+        - Agents
+      summary: Delete agent
+      description: Delete an agent and all its configurations
+      operationId: deleteAgent
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Agent deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /agents/{uuid}/dispatch:
+    post:
+      tags:
+        - Agents
+      summary: Dispatch agent
+      description: Make an outbound call with an agent
+      operationId: dispatchAgent
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+              properties:
+                phone_number:
+                  type: string
+                  description: Destination phone number
+                dynamic_variables:
+                  type: object
+                  description: Runtime variable overrides
+      responses:
+        '200':
+          description: Call dispatched
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  call_id:
+                    type: string
+
+  /agents/capabilities:
+    get:
+      tags:
+        - Agents
+      summary: Get capabilities
+      description: List supported ASR and LLM providers and models
+      operationId: getAgentCapabilities
+      responses:
+        '200':
+          description: Agent capabilities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  asr_capabilities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        provider:
+                          type: string
+                          description: ASR provider name (e.g., "deepgram")
+                        model:
+                          type: string
+                          description: Model identifier (e.g., "nova-2")
+                        description:
+                          type: string
+                          description: Human-readable description of the capability
+                  llm_capabilities:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        provider:
+                          type: string
+                          description: LLM provider name (e.g., "openai", "anthropic")
+                        model:
+                          type: string
+                          description: Model identifier (e.g., "gpt-4o", "claude-3-5-sonnet-20241022")
+                        description:
+                          type: string
+                          description: Human-readable description of the capability
+
+  /agents/system-tools:
+    get:
+      tags:
+        - Agents
+      summary: Get system tools
+      description: List available system tools
+      operationId: getSystemTools
+      responses:
+        '200':
+          description: System tools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /agents/{agent_uuid}/tools:
+    get:
+      tags:
+        - Agent Tools
+      summary: List agent tools
+      description: List all tools for an agent
+      operationId: listAgentTools
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of tools
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Agent Tools
+      summary: Create agent tool
+      description: Create a new tool for an agent
+      operationId: createAgentTool
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - tool_type
+                - tool_config
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                tool_type:
+                  type: string
+                  enum: [webhook, client]
+                tool_config:
+                  type: object
+      responses:
+        '200':
+          description: Tool created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+
+  /agents/{agent_uuid}/tools/{tool_uuid}:
+    get:
+      tags:
+        - Agent Tools
+      summary: Get agent tool
+      description: Get details of a specific tool
+      operationId: getAgentTool
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tool_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tool details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    patch:
+      tags:
+        - Agent Tools
+      summary: Update agent tool
+      description: Update an existing tool
+      operationId: updateAgentTool
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tool_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                tool_config:
+                  type: object
+      responses:
+        '200':
+          description: Tool updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+    
+    delete:
+      tags:
+        - Agent Tools
+      summary: Delete agent tool
+      description: Delete a tool
+      operationId: deleteAgentTool
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: tool_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Tool deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /agents/{agent_uuid}/webhooks:
+    get:
+      tags:
+        - Agent Webhooks
+      summary: List agent webhooks
+      description: List all webhooks for an agent
+      operationId: listAgentWebhooks
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of webhooks
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Agent Webhooks
+      summary: Create agent webhook
+      description: Create a new webhook for an agent
+      operationId: createAgentWebhook
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - webhook_type
+                - webhook_config
+              properties:
+                webhook_type:
+                  type: string
+                  enum: [pre_call, post_call]
+                webhook_config:
+                  type: object
+      responses:
+        '200':
+          description: Webhook created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+
+  /agents/{agent_uuid}/webhooks/{webhook_uuid}:
+    get:
+      tags:
+        - Agent Webhooks
+      summary: Get agent webhook
+      description: Get details of a specific webhook
+      operationId: getAgentWebhook
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Webhook details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    patch:
+      tags:
+        - Agent Webhooks
+      summary: Update agent webhook
+      description: Update an existing webhook
+      operationId: updateAgentWebhook
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                webhook_config:
+                  type: object
+      responses:
+        '200':
+          description: Webhook updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+    
+    delete:
+      tags:
+        - Agent Webhooks
+      summary: Delete agent webhook
+      description: Delete a webhook
+      operationId: deleteAgentWebhook
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: webhook_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Webhook deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /phone_numbers:
+    get:
+      tags:
+        - Agent Phone Numbers
+      summary: List agent phone numbers
+      description: List all agent phone numbers
+      operationId: listPhoneNumbers
+      responses:
+        '200':
+          description: List of phone numbers
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Agent Phone Numbers
+      summary: Create agent phone number
+      description: Create a new agent phone number
+      operationId: createPhoneNumber
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - phone_number
+                - label
+              properties:
+                phone_number:
+                  type: string
+                  description: E.164 formatted phone number
+                label:
+                  type: string
+                supports_inbound:
+                  type: boolean
+                  default: false
+                supports_outbound:
+                  type: boolean
+                  default: false
+                provider:
+                  type: string
+                  enum: [twilio]
+                twilio_account_sid:
+                  type: string
+                twilio_auth_token:
+                  type: string
+                outbound_trunk:
+                  type: object
+                inbound_trunk:
+                  type: object
+      responses:
+        '200':
+          description: Phone number created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+
+  /phone_numbers/{id}:
+    get:
+      tags:
+        - Agent Phone Numbers
+      summary: Get agent phone number
+      description: Get agent phone number details
+      operationId: getPhoneNumber
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Phone number details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Agent Phone Numbers
+      summary: Delete agent phone number
+      description: Delete an agent phone number
+      operationId: deletePhoneNumber
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Phone number deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /phone_numbers/{id}/force:
+    delete:
+      tags:
+        - Agent Phone Numbers
+      summary: Force delete agent phone number
+      description: Force delete an agent phone number even if linked to agent
+      operationId: forceDeletePhoneNumber
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Phone number force deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /knowledge_items:
+    get:
+      tags:
+        - Agent Knowledge Base
+      summary: List knowledge items
+      description: List all knowledge items belonging to the authenticated user's team
+      operationId: listKnowledgeItems
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, ready, failed]
+          description: Filter by status
+        - name: source_type
+          in: query
+          schema:
+            type: string
+            enum: [document, url, text]
+          description: Filter by source type
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+          description: Items per page
+      responses:
+        '200':
+          description: List of knowledge items
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                          format: uuid
+                        title:
+                          type: string
+                        description:
+                          type: string
+                        source_type:
+                          type: string
+                          enum: [document, url, text]
+                        status:
+                          type: string
+                          enum: [pending, processing, ready, failed]
+                        error_message:
+                          type: string
+                          nullable: true
+                        chunk_count:
+                          type: integer
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                        document_url:
+                          type: string
+                          nullable: true
+                        document_filename:
+                          type: string
+                          nullable: true
+                        agent_count:
+                          type: integer
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                      per_page:
+                        type: integer
+                      total_count:
+                        type: integer
+                      total_pages:
+                        type: integer
+
+    post:
+      tags:
+        - Agent Knowledge Base
+      summary: Create knowledge item
+      description: Creates a new knowledge item and queues it for ingestion processing
+      operationId: createKnowledgeItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - source_type
+              properties:
+                title:
+                  type: string
+                  maxLength: 50
+                  description: Title of the knowledge item
+                description:
+                  type: string
+                  maxLength: 200
+                  description: Description of the knowledge item
+                source_type:
+                  type: string
+                  enum: [document, url, text]
+                  description: Type of knowledge source
+                url:
+                  type: string
+                  description: Required when source_type is url
+                raw_text:
+                  type: string
+                  maxLength: 10000
+                  description: Required when source_type is text
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+                - source_type
+                - document
+              properties:
+                title:
+                  type: string
+                  maxLength: 50
+                description:
+                  type: string
+                  maxLength: 200
+                source_type:
+                  type: string
+                  enum: [document]
+                document:
+                  type: string
+                  format: binary
+                  description: PDF file, max 25MB
+      responses:
+        '201':
+          description: Knowledge item created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /knowledge_items/{uuid}:
+    get:
+      tags:
+        - Agent Knowledge Base
+      summary: Get knowledge item
+      description: Retrieves a single knowledge item with detailed information including attached agents
+      operationId: getKnowledgeItem
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the knowledge item
+      responses:
+        '200':
+          description: Knowledge item details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      title:
+                        type: string
+                      description:
+                        type: string
+                      source_type:
+                        type: string
+                        enum: [document, url, text]
+                      status:
+                        type: string
+                        enum: [pending, processing, ready, failed]
+                      error_message:
+                        type: string
+                        nullable: true
+                      chunk_count:
+                        type: integer
+                        nullable: true
+                      url:
+                        type: string
+                        nullable: true
+                      document_url:
+                        type: string
+                        nullable: true
+                      document_filename:
+                        type: string
+                        nullable: true
+                      agents:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            uuid:
+                              type: string
+                              format: uuid
+                            name:
+                              type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Knowledge item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags:
+        - Agent Knowledge Base
+      summary: Delete knowledge item
+      description: Deletes a knowledge item and cleans up associated data
+      operationId: deleteKnowledgeItem
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the knowledge item
+      responses:
+        '200':
+          description: Knowledge item deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        '404':
+          description: Knowledge item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /knowledge_items/{uuid}/reingest:
+    post:
+      tags:
+        - Agent Knowledge Base
+      summary: Re-ingest knowledge item
+      description: Re-runs the ingestion pipeline for an existing knowledge item
+      operationId: reingestKnowledgeItem
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the knowledge item
+      responses:
+        '200':
+          description: Re-ingestion queued successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                  message:
+                    type: string
+        '422':
+          description: Cannot reingest (already processing or rate limited)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /agents/{agent_uuid}/knowledge_items:
+    get:
+      tags:
+        - Agent Knowledge Base
+      summary: List agent's knowledge items
+      description: Lists all knowledge items attached to a specific agent
+      operationId: listAgentKnowledgeItems
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the agent
+      responses:
+        '200':
+          description: List of knowledge items attached to agent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  count:
+                    type: integer
+        '404':
+          description: Agent not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Agent Knowledge Base
+      summary: Attach knowledge item to agent
+      description: Attaches an existing knowledge item to an agent
+      operationId: attachKnowledgeItemToAgent
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - knowledge_item_uuid
+              properties:
+                knowledge_item_uuid:
+                  type: string
+                  format: uuid
+                  description: The UUID of the knowledge item to attach
+      responses:
+        '201':
+          description: Knowledge item attached successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  message:
+                    type: string
+        '422':
+          description: Validation error (not ready, already attached, etc.)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /agents/{agent_uuid}/knowledge_items/{knowledge_item_uuid}:
+    delete:
+      tags:
+        - Agent Knowledge Base
+      summary: Detach knowledge item from agent
+      description: Removes a knowledge item from an agent
+      operationId: detachKnowledgeItemFromAgent
+      parameters:
+        - name: agent_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the agent
+        - name: knowledge_item_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: The UUID of the knowledge item to detach
+      responses:
+        '200':
+          description: Knowledge item detached successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+                  message:
+                    type: string
+        '404':
+          description: Agent or knowledge item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Knowledge item not attached to agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /detect:
+    post:
+      tags:
+        - Deepfake Detection
+      summary: Create deepfake detection
+      description: Analyze audio, image, and video for deepfake detection
+      operationId: createDetection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: HTTPS URL to audio, image, or video file
+      responses:
+        '200':
+          description: Detection job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      status:
+                        type: string
+
+  /detect/{uuid}:
+    get:
+      tags:
+        - Deepfake Detection
+      summary: Get deepfake detection result
+      description: Get deepfake detection result
+      operationId: getDetection
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /audio_intelligence:
+    post:
+      tags:
+        - Intelligence
+      summary: Run intelligence
+      description: Analyze audio, image, or video for comprehensive insights
+      operationId: runIntelligence
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                json:
+                  type: boolean
+                  default: false
+                  description: Return structured fields instead of prose
+      responses:
+        '200':
+          description: Intelligence analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      description:
+                        oneOf:
+                          - type: string
+                          - type: object
+                      created_at:
+                        type: string
+                        format: date-time
+
+  /identity:
+    post:
+      tags:
+        - Identity
+      summary: Create identity
+      description: Create a new speaker identity
+      operationId: createIdentity
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audio_url
+              properties:
+                audio_url:
+                  type: string
+                  format: uri
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Identity created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    get:
+      tags:
+        - Identity
+      summary: List identities
+      description: List all speaker identities
+      operationId: listIdentities
+      responses:
+        '200':
+          description: List of identities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /identity/search:
+    post:
+      tags:
+        - Identity
+      summary: Search identities
+      description: Search for matching speaker identities
+      operationId: searchIdentities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - audio_url
+              properties:
+                audio_url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  matches:
+                    type: array
+                    items:
+                      type: object
+
+  /watermark/apply:
+    post:
+      tags:
+        - Watermark
+      summary: Apply watermark
+      description: Apply audio watermark to a file
+      operationId: applyWatermark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Watermark job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /watermark/apply/{uuid}/result:
+    get:
+      tags:
+        - Watermark
+      summary: Get watermark apply result
+      description: Retrieve the result of a watermark apply job
+      operationId: getWatermarkApplyResult
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Apply result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+                      watermarked_audio:
+                        type: string
+                        format: uri
+                        description: Signed URL to the watermarked audio file
+
+  /watermark/detect:
+    post:
+      tags:
+        - Watermark
+      summary: Detect watermark
+      description: Detect watermark in an audio file
+      operationId: detectWatermark
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+      responses:
+        '200':
+          description: Detection job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+
+  /watermark/detect/{uuid}/result:
+    get:
+      tags:
+        - Watermark
+      summary: Get watermark detection result
+      description: Retrieve the result of a watermark detection
+      operationId: getWatermarkDetectionResult
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      metrics:
+                        type: object
+                        additionalProperties:
+                          type: boolean
+
+  /voices:
+    get:
+      tags:
+        - Voices
+      summary: List voices
+      description: Retrieve voice metadata
+      operationId: listVoices
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 1000
+            default: 10
+        - name: advanced
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of voices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Voices
+      summary: Create voice
+      description: Create a new voice
+      operationId: createVoice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                voice_type:
+                  type: string
+                  enum: [rapid, professional]
+                  default: professional
+                dataset_url:
+                  type: string
+                  format: uri
+                callback_uri:
+                  type: string
+                  format: uri
+                language:
+                  type: string
+                  default: "en-US"
+      responses:
+        '200':
+          description: Voice created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /voices/{voice_uuid}:
+    get:
+      tags:
+        - Voices
+      summary: Get voice
+      description: Get voice details
+      operationId: getVoice
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Voice details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Voices
+      summary: Delete voice
+      description: Delete a voice
+      operationId: deleteVoice
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Voice deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /voices/{voice_uuid}/build:
+    post:
+      tags:
+        - Voices
+      summary: Build voice
+      description: Start voice training
+      operationId: buildVoice
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fill:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Build started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /voice-design:
+    post:
+      tags:
+        - Voice Design
+      summary: Generate voice candidates
+      description: Generate three voice candidates from a text prompt
+      operationId: generateVoiceDesign
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - user_prompt
+              properties:
+                user_prompt:
+                  type: string
+                  description: Description of desired voice
+      responses:
+        '200':
+          description: Voice candidates generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  voice_candidates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        audio_url:
+                          type: string
+                          format: uri
+                        voice_sample_index:
+                          type: integer
+                        uuid:
+                          type: string
+
+  /voice-design/create:
+    post:
+      tags:
+        - Voice Design
+      summary: Create voice from candidate
+      description: Create a voice from a voice design candidate
+      operationId: createVoiceFromCandidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uuid
+                - voice_sample_index
+                - name
+              properties:
+                uuid:
+                  type: string
+                voice_sample_index:
+                  type: integer
+                name:
+                  type: string
+      responses:
+        '200':
+          description: Voice created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  voice_uuid:
+                    type: string
+
+  /voices/{voice_uuid}/recordings:
+    get:
+      tags:
+        - Recordings
+      summary: List recordings
+      description: List all recordings for a voice
+      operationId: listRecordings
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of recordings
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Recordings
+      summary: Create recording
+      description: Upload a new recording for voice training
+      operationId: createRecording
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+                - name
+                - text
+                - emotion
+                - is_active
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Audio file (WAV recommended, 1-12 seconds)
+                name:
+                  type: string
+                  description: Display name
+                text:
+                  type: string
+                  description: Transcript of the clip
+                emotion:
+                  type: string
+                  description: Emotion label
+                is_active:
+                  type: boolean
+                  description: Include in training
+                fill:
+                  type: boolean
+                  description: Include for Resemble Fill
+      responses:
+        '200':
+          description: Recording created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /voices/{voice_uuid}/recordings/{recording_id}:
+    get:
+      tags:
+        - Recordings
+      summary: Get recording
+      description: Get recording details
+      operationId: getRecording
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recording_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recording details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    patch:
+      tags:
+        - Recordings
+      summary: Update recording
+      description: Update a recording
+      operationId: updateRecording
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recording_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                text:
+                  type: string
+                emotion:
+                  type: string
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Recording updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Recordings
+      summary: Delete recording
+      description: Delete a recording
+      operationId: deleteRecording
+      parameters:
+        - name: voice_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recording_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recording deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /term_substitutions:
+    get:
+      tags:
+        - Term Substitutions
+      summary: List term substitutions
+      description: List all term substitutions
+      operationId: listTermSubstitutions
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of term substitutions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Term Substitutions
+      summary: Create term substitution
+      description: Create a new pronunciation substitution
+      operationId: createTermSubstitution
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - original_text
+                - replacement_text
+              properties:
+                original_text:
+                  type: string
+                  description: Original text to substitute
+                replacement_text:
+                  type: string
+                  description: Replacement pronunciation
+      responses:
+        '200':
+          description: Term substitution created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /term_substitutions/{id}:
+    get:
+      tags:
+        - Term Substitutions
+      summary: Get term substitution
+      description: Get term substitution details
+      operationId: getTermSubstitution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Term substitution details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Term Substitutions
+      summary: Delete term substitution
+      description: Delete a term substitution
+      operationId: deleteTermSubstitution
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Term substitution deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /voice_settings_presets:
+    get:
+      tags:
+        - Voice Settings Presets
+      summary: List voice settings presets
+      description: List all voice settings presets
+      operationId: listVoiceSettingsPresets
+      responses:
+        '200':
+          description: List of presets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Voice Settings Presets
+      summary: Create voice settings preset
+      description: Create a new voice settings preset (max 5 per user)
+      operationId: createVoiceSettingsPreset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  maxLength: 30
+                  description: Preset name (unique, max 30 characters)
+                pace:
+                  type: number
+                  minimum: 0.2
+                  maximum: 2.0
+                  default: 1.0
+                  description: Speech pace/speed
+                temperature:
+                  type: number
+                  minimum: 0.1
+                  maximum: 5.0
+                  default: 0.8
+                  description: Voice variation
+                pitch:
+                  type: number
+                  minimum: -10
+                  maximum: 10
+                  default: 0.0
+                  description: Voice pitch adjustment
+                useHd:
+                  type: boolean
+                  default: false
+                  description: Use HD quality
+                exaggeration:
+                  type: number
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.5
+                  description: Emotional exaggeration
+                description:
+                  type: string
+                  maxLength: 1000
+                  default: ""
+                  description: Voice style prompt
+      responses:
+        '201':
+          description: Preset created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                  message:
+                    type: string
+
+  /voice_settings_presets/{uuid}:
+    get:
+      tags:
+        - Voice Settings Presets
+      summary: Get voice settings preset
+      description: Get preset details
+      operationId: getVoiceSettingsPreset
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Preset details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+    
+    patch:
+      tags:
+        - Voice Settings Presets
+      summary: Update voice settings preset
+      description: Update a preset
+      operationId: updateVoiceSettingsPreset
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                pace:
+                  type: number
+                temperature:
+                  type: number
+                pitch:
+                  type: number
+                useHd:
+                  type: boolean
+                exaggeration:
+                  type: number
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Preset updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+    
+    delete:
+      tags:
+        - Voice Settings Presets
+      summary: Delete voice settings preset
+      description: Delete a preset
+      operationId: deleteVoiceSettingsPreset
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Preset deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /projects:
+    get:
+      tags:
+        - Projects
+      summary: List projects
+      description: List all projects
+      operationId: listProjects
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of projects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+    
+    post:
+      tags:
+        - Projects
+      summary: Create project
+      description: Create a new project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - description
+                - is_collaborative
+                - is_archived
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_collaborative:
+                  type: boolean
+                is_archived:
+                  type: boolean
+      responses:
+        '200':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /projects/{project_uuid}:
+    get:
+      tags:
+        - Projects
+      summary: Get project
+      description: Get project details
+      operationId: getProject
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    put:
+      tags:
+        - Projects
+      summary: Update project
+      description: Update a project
+      operationId: updateProject
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                is_collaborative:
+                  type: boolean
+                is_archived:
+                  type: boolean
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Projects
+      summary: Delete project
+      description: Delete a project
+      operationId: deleteProject
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Project deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /projects/{project_uuid}/clips:
+    get:
+      tags:
+        - Clips
+      summary: List clips
+      description: List clips in a project
+      operationId: listClips
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of clips
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /projects/{project_uuid}/clips/{clip_uuid}:
+    get:
+      tags:
+        - Clips
+      summary: Get clip
+      description: Get clip details
+      operationId: getClip
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clip_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clip details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    patch:
+      tags:
+        - Clips
+      summary: Update clip
+      description: Update a clip
+      operationId: updateClip
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clip_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                body:
+                  type: string
+                is_archived:
+                  type: boolean
+      responses:
+        '200':
+          description: Clip updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+    
+    delete:
+      tags:
+        - Clips
+      summary: Delete clip
+      description: Delete a clip
+      operationId: deleteClip
+      parameters:
+        - name: project_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: clip_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clip deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  # Note: Clip timestamps are returned as part of the clip response object,
+  # not as a separate endpoint. See the timestamps field in clip responses.
+
+  /account:
+    get:
+      tags:
+        - Account
+      summary: Get account
+      description: Get account information
+      operationId: getAccount
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /account/teams:
+    get:
+      tags:
+        - Account
+      summary: Get teams
+      description: Get team information
+      operationId: getTeams
+      responses:
+        '200':
+          description: Team information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+  /account/teams/{team_uuid}:
+    get:
+      tags:
+        - Account
+      summary: Get team
+      description: Get specific team information
+      operationId: getTeam
+      parameters:
+        - name: team_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Team information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      plan:
+                        type: string
+                      voice_limit:
+                        type: integer
+                      units:
+                        type: string
+                      rate:
+                        type: number
+                      current_usage:
+                        type: integer
+
+  /account/billing_usage:
+    get:
+      tags:
+        - Account
+      summary: Get billing usage
+      description: Get billing and usage information
+      operationId: getBillingUsage
+      responses:
+        '200':
+          description: Billing information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /stream:
+    post:
+      tags:
+        - Text-to-Speech
+      summary: Streaming text-to-speech synthesis (HTTP)
+      description: Stream audio as it's generated. Returns chunked WAV data for progressive playback.
+      operationId: streamSynthesize
+      servers:
+        - url: https://f.cluster.resemble.ai
+          x-fern-server-name: synthesis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - voice_uuid
+                - data
+              properties:
+                voice_uuid:
+                  type: string
+                  description: Voice UUID to use for synthesis
+                data:
+                  type: string
+                  description: Text or SSML to synthesize (max 2000 characters)
+                project_uuid:
+                  type: string
+                  description: Optional project UUID to store the clip
+                precision:
+                  type: string
+                  enum: [MULAW, PCM_16, PCM_24, PCM_32]
+                  default: PCM_32
+                  description: Audio precision
+                sample_rate:
+                  type: integer
+                  enum: [8000, 16000, 22050, 32000, 44100, 48000]
+                  default: 48000
+                  description: Audio sample rate in Hz
+                use_hd:
+                  type: boolean
+                  default: false
+                  description: Enable HD synthesis with small latency trade-off
+      responses:
+        '200':
+          description: Streaming audio response (chunked WAV)
+          content:
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /duet_voices:
+    get:
+      tags:
+        - Duets
+      summary: List duet voices
+      description: Returns default and custom duet voices
+      operationId: listDuetVoices
+      responses:
+        '200':
+          description: List of duet voices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      tags:
+        - Duets
+      summary: Create custom duet voice
+      description: Create a custom voice for duet generation
+      operationId: createDuetVoice
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+                - audio
+              properties:
+                name:
+                  type: string
+                  description: Voice name
+                style_prompt:
+                  type: string
+                  description: Optional style prompt
+                audio:
+                  type: string
+                  format: binary
+                  description: Audio file (MP3/WAV/M4A/OGG/AAC/FLAC max 10 MB)
+      responses:
+        '200':
+          description: Duet voice created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /duet_voices/{id}:
+    put:
+      tags:
+        - Duets
+      summary: Update duet voice
+      description: Update a custom duet voice (default voices cannot be modified)
+      operationId: updateDuetVoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                style_prompt:
+                  type: string
+      responses:
+        '200':
+          description: Duet voice updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+    delete:
+      tags:
+        - Duets
+      summary: Delete duet voice
+      description: Delete a custom duet voice (default voices cannot be deleted)
+      operationId: deleteDuetVoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Duet voice deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /duet_voice_pairs:
+    get:
+      tags:
+        - Duets
+      summary: List duet voice pairs
+      description: List all voice pairs for duet generation
+      operationId: listDuetVoicePairs
+      responses:
+        '200':
+          description: List of voice pairs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      type: object
+
+    post:
+      tags:
+        - Duets
+      summary: Create duet voice pair
+      description: Create a voice pair for duet generation
+      operationId: createDuetVoicePair
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - voice_1_id
+                - voice_2_id
+              properties:
+                voice_1_id:
+                  type: integer
+                  description: ID of first voice
+                voice_2_id:
+                  type: integer
+                  description: ID of second voice
+                name:
+                  type: string
+                  description: Optional pair name
+      responses:
+        '200':
+          description: Voice pair created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+
+  /duet:
+    post:
+      tags:
+        - Duets
+      summary: Generate duet
+      description: Generate conversational audio with two speakers
+      operationId: generateDuet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - voice_pair_id
+                - script
+              properties:
+                voice_pair_id:
+                  type: integer
+                  description: Voice pair ID to use
+                script:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - speaker
+                      - text
+                    properties:
+                      speaker:
+                        type: integer
+                        enum: [0, 1]
+                        description: Speaker index (0 or 1)
+                      text:
+                        type: string
+                        description: Text for this speaker
+                title:
+                  type: string
+                  description: Optional title for the duet
+                callback_uri:
+                  type: string
+                  format: uri
+                  description: Webhook URL for completion notification
+      responses:
+        '200':
+          description: Duet generation job created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      status:
+                        type: string
+

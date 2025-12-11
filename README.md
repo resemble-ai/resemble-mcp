@@ -10,13 +10,13 @@ Official MCP server exposing Resemble AI documentation as resources and tools. C
 
 This is the official Resemble AI MCP server. It implements the Model Context Protocol (stdio transport) to serve documentation from `docs/pages/` as queryable resources. The server aggregates docs by topic and provides full-text search across all MDX files.
 
-**Implementation:**
-- Topic-based aggregation (13 topics: voice-cloning, text-to-speech, agents, etc.)
-- Full-text search with basic scoring across all documentation pages
-- Direct page access by filesystem path
-- API specification (`api_spec.md`) access via resource URI
+**What it provides:**
+- Topic-based documentation aggregation (13 topics: voice-cloning, text-to-speech, agents, etc.)
+- Full-text search across all MDX documentation pages
+- OpenAPI 3.0 spec with exact request/response schemas for code generation
+- Direct page and endpoint access
 
-Once connected, your coding assistant can query Resemble AI documentation programmatically, enabling faster development without manual doc lookup. You can vibe code complete applications—your assistant has instant access to API references, guides, and specifications.
+Once connected, your coding assistant can query Resemble AI documentation programmatically. You can vibe code complete applications—your assistant has instant access to guides, tutorials, and exact API schemas for accurate code generation.
 
 ## Quick Start
 
@@ -104,6 +104,25 @@ Lists all available topic IDs with descriptions.
 
 **Returns:** Markdown list of topics.
 
+### `resemble_api_endpoint`
+
+Get detailed OpenAPI specification for a specific API endpoint. Returns exact request/response schemas, parameters, and types.
+
+**Parameters:**
+- `method` (string, required): HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`)
+- `path` (string, required): API endpoint path (e.g., `/synthesize`, `/voices`)
+
+**Returns:** Endpoint specification with schemas, parameters, and response formats.
+
+### `resemble_api_search`
+
+Search the OpenAPI spec for endpoints matching a query.
+
+**Parameters:**
+- `query` (string, required): Search query (e.g., `voice`, `streaming`, `agent`)
+
+**Returns:** List of matching endpoints with methods, paths, and summaries.
+
 ## Usage
 
 Once configured, your coding assistant (Cursor, Claude Code, etc.) can call these tools directly. Example use cases:
@@ -124,29 +143,39 @@ Once configured, your coding assistant (Cursor, Claude Code, etc.) can call thes
 }
 ```
 
-**Getting specific API endpoint docs:**
+**Getting exact API schema for implementation:**
 ```json
 {
-  "name": "resemble_get_page",
-  "arguments": { "path": "voice-generation/text-to-speech/streaming-websocket" }
+  "name": "resemble_api_endpoint",
+  "arguments": { "method": "POST", "path": "/synthesize" }
 }
 ```
 
-Your assistant uses these tools automatically when you ask it to build features. For example, "build me a TTS streaming service" triggers `resemble_docs_lookup` for the `text-to-speech` topic, giving your assistant all the context it needs to implement the complete feature.
+**Finding all voice-related API endpoints:**
+```json
+{
+  "name": "resemble_api_search",
+  "arguments": { "query": "voice" }
+}
+```
 
-## Documentation Structure
+Your assistant uses these tools automatically when you ask it to build features. For example, "build me a TTS streaming service" triggers `resemble_docs_lookup` for the `text-to-speech` topic, and may use `resemble_api_endpoint` to get exact request schemas for accurate implementation.
+
+## Project Structure
 
 ```
-docs/
-├── pages/
-│   ├── getting-started/     # Auth, quickstart, basics
-│   ├── voice-generation/    # TTS, STT, S2S
-│   ├── voice-creation/      # Voice cloning, recordings
-│   ├── agents/              # AI agents
-│   ├── detect/              # Deepfake detection
-│   ├── guides/              # Step-by-step tutorials
-│   └── ...
-└── api_spec.md              # Full API reference
+resemble-mcp/
+├── server.py               # MCP server implementation
+├── docs/
+│   └── pages/              # MDX documentation files
+│       ├── getting-started/    # Auth, quickstart, basics
+│       ├── voice-generation/   # TTS, STT, S2S
+│       ├── voice-creation/     # Voice cloning, recordings
+│       ├── agents/             # AI agents
+│       ├── detect/             # Deepfake detection
+│       └── guides/             # Step-by-step tutorials
+└── openapi/
+    └── openapi.yml         # OpenAPI 3.0 specification
 ```
 
 ## Supported MCP Clients
@@ -169,8 +198,9 @@ python server.py
 **Architecture:**
 - Server implementation: `server.py`
 - Documentation source: `docs/pages/` (MDX files)
+- API specification: `openapi/openapi.yml` (OpenAPI 3.0)
 - Topic definitions: Hardcoded in `TOPICS` dict
-- Search: Full-text search with basic scoring
+- Search: Full-text search with scoring across docs and OpenAPI endpoints
 
 ## Troubleshooting
 

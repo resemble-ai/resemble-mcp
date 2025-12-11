@@ -24,39 +24,25 @@ curl --request GET "https://app.resemble.ai/api/v2/agents/capabilities" \
 ```json
 {
   "success": true,
-  "capabilities": {
-    "asr": [
-      {
-        "provider": "deepgram",
-        "model": "nova-2",
-        "description": "Deepgram Nova-2 ASR model"
-      }
-    ],
-    "llm": [
-      {
-        "provider": "openai",
-        "model": "gpt-4o",
-        "description": "OpenAI GPT-4 Optimized"
-      },
-      {
-        "provider": "anthropic",
-        "model": "claude-3-5-sonnet-20241022",
-        "description": "Anthropic Claude 3.5 Sonnet"
-      }
-    ],
-    "tts": [
-      {
-        "provider": "resemble",
-        "description": "Resemble AI voice synthesis"
-      }
-    ],
-    "turn": [
-      {
-        "mode": "silence",
-        "description": "Silence-based turn detection"
-      }
-    ]
-  }
+  "asr_capabilities": [
+    {
+      "provider": "deepgram",
+      "model": "nova-2",
+      "description": "Deepgram Nova-2 ASR model"
+    }
+  ],
+  "llm_capabilities": [
+    {
+      "provider": "openai",
+      "model": "gpt-4o",
+      "description": "OpenAI GPT-4 Optimized"
+    },
+    {
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "description": "Anthropic Claude 3.5 Sonnet"
+    }
+  ]
 }
 ```
 
@@ -65,11 +51,8 @@ curl --request GET "https://app.resemble.ai/api/v2/agents/capabilities" \
 | Attribute | Type | Description |
 | --- | --- | --- |
 | success | boolean | Indicates if the request was successful |
-| capabilities | object | Object containing all capability categories |
-| capabilities.asr | array | Available ASR provider/model combinations |
-| capabilities.llm | array | Available LLM provider/model combinations |
-| capabilities.tts | array | Available TTS providers |
-| capabilities.turn | array | Available turn-taking modes |
+| asr_capabilities | array | Available ASR provider/model combinations |
+| llm_capabilities | array | Available LLM provider/model combinations |
 
 ### ASR Capabilities
 

@@ -7,6 +7,7 @@ Designed for minimal tool calls - get comprehensive answers in a single request.
 
 import json
 import asyncio
+import yaml
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from mcp.server import Server
@@ -21,6 +22,177 @@ BASE_DIR = Path(__file__).parent
 DOCS_DIR = BASE_DIR / "docs"
 PAGES_DIR = DOCS_DIR / "pages"
 API_SPEC_FILE = DOCS_DIR / "api_spec.md"
+OPENAPI_FILE = BASE_DIR / "openapi" / "openapi.yml"
+
+# Cache for OpenAPI spec
+_openapi_cache: Optional[Dict[str, Any]] = None
+
+
+def load_openapi_spec() -> Optional[Dict[str, Any]]:
+    """Load and cache the OpenAPI specification."""
+    global _openapi_cache
+    if _openapi_cache is not None:
+        return _openapi_cache
+    
+    if not OPENAPI_FILE.exists():
+        return None
+    
+    try:
+        content = OPENAPI_FILE.read_text(encoding='utf-8')
+        _openapi_cache = yaml.safe_load(content)
+        return _openapi_cache
+    except Exception:
+        return None
+
+
+def get_openapi_endpoint(method: str, path: str) -> Optional[str]:
+    """Get OpenAPI specification for a specific endpoint."""
+    spec = load_openapi_spec()
+    if not spec or "paths" not in spec:
+        return None
+    
+    # Normalize path (handle both /path and path formats)
+    if not path.startswith("/"):
+        path = "/" + path
+    
+    # Try exact match first
+    path_data = spec["paths"].get(path)
+    
+    # Try partial match if exact fails
+    if not path_data:
+        for spec_path in spec["paths"]:
+            if path in spec_path or spec_path.endswith(path):
+                path_data = spec["paths"][spec_path]
+                path = spec_path
+                break
+    
+    if not path_data:
+        return None
+    
+    method_lower = method.lower()
+    if method_lower not in path_data:
+        # Return all methods if specific method not found
+        return format_endpoint_spec(path, path_data)
+    
+    return format_endpoint_spec(path, {method_lower: path_data[method_lower]})
+
+
+def format_endpoint_spec(path: str, methods: Dict) -> str:
+    """Format endpoint specification as readable markdown."""
+    spec = load_openapi_spec()
+    output = [f"# API Endpoint: {path}\n"]
+    
+    for method, data in methods.items():
+        output.append(f"## {method.upper()}")
+        output.append(f"**Summary**: {data.get('summary', 'N/A')}")
+        output.append(f"**Description**: {data.get('description', 'N/A')}")
+        
+        if data.get('tags'):
+            output.append(f"**Tags**: {', '.join(data['tags'])}")
+        
+        # Parameters
+        if data.get('parameters'):
+            output.append("\n### Parameters")
+            for param in data['parameters']:
+                required = " (required)" if param.get('required') else ""
+                schema = param.get('schema', {})
+                param_type = schema.get('type', 'any')
+                output.append(f"- `{param['name']}`{required}: {param_type} - {param.get('description', 'N/A')}")
+        
+        # Request body
+        if data.get('requestBody'):
+            output.append("\n### Request Body")
+            content = data['requestBody'].get('content', {})
+            for content_type, schema_data in content.items():
+                output.append(f"**Content-Type**: {content_type}")
+                if 'schema' in schema_data:
+                    output.append("```json")
+                    output.append(json.dumps(resolve_schema(schema_data['schema'], spec), indent=2))
+                    output.append("```")
+        
+        # Responses
+        if data.get('responses'):
+            output.append("\n### Responses")
+            for status, response in data['responses'].items():
+                output.append(f"\n**{status}**: {response.get('description', 'N/A')}")
+                if 'content' in response:
+                    for content_type, schema_data in response['content'].items():
+                        if 'schema' in schema_data:
+                            output.append("```json")
+                            output.append(json.dumps(resolve_schema(schema_data['schema'], spec), indent=2))
+                            output.append("```")
+        
+        output.append("")
+    
+    return "\n".join(output)
+
+
+def resolve_schema(schema: Dict, spec: Dict, depth: int = 0) -> Dict:
+    """Resolve $ref references in schema (with depth limit to prevent infinite recursion)."""
+    if depth > 5:
+        return {"type": "object", "description": "..."}
+    
+    if '$ref' in schema:
+        ref_path = schema['$ref'].split('/')
+        resolved = spec
+        for part in ref_path[1:]:  # Skip the '#'
+            resolved = resolved.get(part, {})
+        return resolve_schema(resolved, spec, depth + 1)
+    
+    if schema.get('type') == 'object' and 'properties' in schema:
+        result = {"type": "object", "properties": {}}
+        for prop, prop_schema in schema['properties'].items():
+            result["properties"][prop] = resolve_schema(prop_schema, spec, depth + 1)
+        return result
+    
+    if schema.get('type') == 'array' and 'items' in schema:
+        return {"type": "array", "items": resolve_schema(schema['items'], spec, depth + 1)}
+    
+    # Return simplified schema
+    simple = {}
+    for key in ['type', 'format', 'enum', 'example', 'description', 'default']:
+        if key in schema:
+            simple[key] = schema[key]
+    return simple if simple else schema
+
+
+def search_openapi_endpoints(query: str) -> List[Dict[str, Any]]:
+    """Search OpenAPI spec for endpoints matching query."""
+    spec = load_openapi_spec()
+    if not spec or "paths" not in spec:
+        return []
+    
+    results = []
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
+    
+    for path, methods in spec["paths"].items():
+        for method, data in methods.items():
+            if method.startswith('x-'):  # Skip extensions
+                continue
+            
+            # Score based on matches
+            score = 0
+            text_to_search = f"{path} {data.get('summary', '')} {data.get('description', '')} {' '.join(data.get('tags', []))}".lower()
+            
+            if query_lower in text_to_search:
+                score += 10
+            
+            for word in query_words:
+                if len(word) > 2 and word in text_to_search:
+                    score += 2
+            
+            if score > 0:
+                results.append({
+                    "method": method.upper(),
+                    "path": path,
+                    "summary": data.get('summary', ''),
+                    "tags": data.get('tags', []),
+                    "score": score
+                })
+    
+    results.sort(key=lambda x: x["score"], reverse=True)
+    return results[:10]
 
 # =============================================================================
 # TOPIC DEFINITIONS - Maps user questions to relevant documentation
@@ -114,8 +286,8 @@ TOPICS = {
         "keywords": ["stream", "streaming", "websocket", "real-time", "realtime", "low latency"]
     },
     "detect": {
-        "name": "Deepfake Detection",
-        "description": "Detect AI-generated audio and watermarking",
+        "name": "Deepfake Detection & Watermarking",
+        "description": "Detect AI-generated audio, apply/detect watermarks, and verify identity",
         "pages": [
             "detect/overview",
             "detect/overview/create",
@@ -125,7 +297,9 @@ TOPICS = {
             "detect/watermark/detect",
             "detect/identity/overview",
         ],
-        "keywords": ["detect", "deepfake", "fake", "watermark", "identity", "verify", "authentic"]
+        "keywords": ["detect", "deepfake", "fake", "watermark", "watermarking", "audio watermark", 
+                     "identity", "verify", "authentic", "synthetic", "ai detection", "apply watermark",
+                     "detect watermark"]
     },
     "agents": {
         "name": "AI Agents",
@@ -232,20 +406,37 @@ def get_page_content(path: str) -> Optional[str]:
 
 
 def find_topic(query: str) -> Optional[str]:
-    """Find the best matching topic for a query."""
-    query_lower = query.lower()
+    """Find the best matching topic for a query using flexible matching."""
+    query_lower = query.lower().strip()
     
-    # Direct topic name match
+    # 1. Exact topic ID match
+    if query_lower in TOPICS:
+        return query_lower
+    
+    # 2. Direct topic name match
     for topic_id, topic in TOPICS.items():
         if topic_id in query_lower or topic["name"].lower() in query_lower:
             return topic_id
     
-    # Keyword match
+    # 3. Keyword match (bidirectional - query in keyword OR keyword in query)
     best_match = None
     best_score = 0
     
     for topic_id, topic in TOPICS.items():
-        score = sum(1 for kw in topic["keywords"] if kw in query_lower)
+        score = 0
+        for kw in topic["keywords"]:
+            # Check both directions for flexible matching
+            if kw in query_lower:
+                score += 3  # Keyword found in query (strong match)
+            elif query_lower in kw:
+                score += 2  # Query is part of keyword (partial match)
+            # Also check word overlap for multi-word queries
+            query_words = set(query_lower.split())
+            kw_words = set(kw.split())
+            overlap = query_words & kw_words
+            if overlap:
+                score += len(overlap)
+        
         if score > best_score:
             best_score = score
             best_match = topic_id
@@ -349,13 +540,22 @@ async def list_resources() -> List[Resource]:
             mimeType="text/markdown"
         ))
     
-    # Add API spec
+    # Add API spec (markdown)
     if API_SPEC_FILE.exists():
         resources.append(Resource(
             uri="resemble://docs/api-spec",
-            name="API Specification",
-            description="Complete Resemble AI V2 API specification",
+            name="API Specification (Markdown)",
+            description="Complete Resemble AI V2 API specification in Markdown",
             mimeType="text/markdown"
+        ))
+    
+    # Add OpenAPI spec
+    if OPENAPI_FILE.exists():
+        resources.append(Resource(
+            uri="resemble://openapi/spec",
+            name="OpenAPI Specification",
+            description="Full OpenAPI 3.0 spec with all endpoints, schemas, and parameters",
+            mimeType="application/x-yaml"
         ))
     
     return resources
@@ -367,6 +567,11 @@ async def read_resource(uri: str) -> str:
     if uri.startswith("resemble://topic/"):
         topic_id = uri.replace("resemble://topic/", "")
         return get_topic_content(topic_id)
+    
+    if uri == "resemble://openapi/spec":
+        if OPENAPI_FILE.exists():
+            return OPENAPI_FILE.read_text(encoding='utf-8')
+        raise ValueError("OpenAPI spec not found")
     
     if uri.startswith("resemble://docs/"):
         path = uri.replace("resemble://docs/", "")
@@ -385,28 +590,41 @@ async def read_resource(uri: str) -> str:
 @app.list_tools()
 async def list_tools() -> List[Tool]:
     """List available tools."""
-    return [
+    tools = [
         Tool(
             name="resemble_docs_lookup",
             description="""Get comprehensive documentation about a Resemble AI topic. 
 This is the PRIMARY tool - use it first for any question about Resemble AI.
 Returns complete, aggregated documentation in a single call.
 
-Available topics: voice-cloning, text-to-speech, speech-to-speech, speech-to-text, 
-getting-started, voice-design, streaming, detect, agents, sdks, projects-clips, 
-audio-tools, ssml
+Supports flexible matching - use topic IDs, names, or keywords:
+
+Topics (use these IDs or related keywords):
+- voice-cloning: clone, custom voice, train, recordings, dataset
+- text-to-speech: tts, synthesize, generate speech, audio generation
+- speech-to-speech: s2s, voice conversion
+- speech-to-text: stt, transcribe, transcription
+- getting-started: auth, api key, quickstart, rate limit
+- voice-design: design voice, generate voice, candidate
+- streaming: websocket, real-time, low latency
+- detect: deepfake, watermark, identity, verify, authentic
+- agents: conversational, phone, call, webhook, knowledge base
+- sdks: python, node, npm, pip, library
+- projects-clips: project, clip, manage
+- audio-tools: enhance, edit, improve audio
+- ssml: markup, prosody, emphasis, phoneme
 
 Examples:
 - "voice-cloning" → Everything about cloning voices
-- "text-to-speech" → TTS documentation and guides  
-- "getting-started" → Auth, quickstart, basics""",
+- "watermark" → Watermarking docs (matched via 'detect' topic)
+- "tts" → Text-to-speech documentation
+- "transcribe" → Speech-to-text documentation""",
             inputSchema={
                 "type": "object",
                 "properties": {
                     "topic": {
                         "type": "string",
-                        "description": "Topic to look up (e.g., 'voice-cloning', 'text-to-speech', 'streaming')",
-                        "enum": list(TOPICS.keys())
+                        "description": "Topic ID, name, or keyword (e.g., 'voice-cloning', 'watermark', 'tts', 'transcribe')"
                     }
                 },
                 "required": ["topic"]
@@ -460,6 +678,59 @@ Use this to discover what topics are available.""",
             }
         ),
     ]
+    
+    # Add OpenAPI tools if spec exists
+    if OPENAPI_FILE.exists():
+        tools.extend([
+            Tool(
+                name="resemble_api_endpoint",
+                description="""Get detailed OpenAPI specification for a specific API endpoint.
+Returns request/response schemas, parameters, and examples.
+Use this when you need exact API details for implementation.
+
+Examples:
+- method: "POST", path: "/synthesize" → TTS synthesis endpoint
+- method: "GET", path: "/voices" → List voices endpoint
+- method: "POST", path: "/speech-to-text" → Transcription endpoint""",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "method": {
+                            "type": "string",
+                            "description": "HTTP method (GET, POST, PUT, PATCH, DELETE)",
+                            "enum": ["GET", "POST", "PUT", "PATCH", "DELETE"]
+                        },
+                        "path": {
+                            "type": "string",
+                            "description": "API endpoint path (e.g., '/synthesize', '/voices', '/projects')"
+                        }
+                    },
+                    "required": ["method", "path"]
+                }
+            ),
+            Tool(
+                name="resemble_api_search",
+                description="""Search the OpenAPI specification for endpoints matching a query.
+Use this to find which API endpoints are available for a feature.
+
+Examples:
+- "voice" → All voice-related endpoints
+- "streaming" → Streaming endpoints
+- "agent" → Agent-related endpoints""",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "query": {
+                            "type": "string",
+                            "description": "Search query for API endpoints"
+                        }
+                    },
+                    "required": ["query"]
+                }
+            ),
+        ])
+    
+    return tools
 
 
 @app.call_tool()
@@ -467,22 +738,32 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
     """Handle tool calls."""
     
     if name == "resemble_docs_lookup":
-        topic = arguments.get("topic", "")
+        topic = arguments.get("topic", "").strip()
+        original_query = topic
         
-        # Try to find topic even if not exact match
+        # Try to find topic using flexible matching
         if topic not in TOPICS:
             found_topic = find_topic(topic)
             if found_topic:
                 topic = found_topic
             else:
-                # Return available topics
-                topics_list = "\n".join([f"- **{tid}**: {t['name']} - {t['description']}" for tid, t in TOPICS.items()])
+                # Return available topics with keywords for discoverability
+                topics_list = "\n".join([
+                    f"- **{tid}**: {t['name']}\n  Keywords: {', '.join(t['keywords'][:5])}" 
+                    for tid, t in TOPICS.items()
+                ])
                 return [TextContent(
                     type="text",
-                    text=f"Topic '{topic}' not found.\n\nAvailable topics:\n{topics_list}"
+                    text=f"No topic found matching '{original_query}'.\n\n"
+                         f"**Tip**: Try using one of these topic IDs or related keywords:\n\n{topics_list}\n\n"
+                         f"You can also use `resemble_search` to search across all documentation."
                 )]
         
+        # Include matched topic info if it was fuzzy matched
         content = get_topic_content(topic)
+        if original_query.lower() != topic:
+            content = f"*Matched '{original_query}' → topic '{topic}'*\n\n" + content
+        
         return [TextContent(type="text", text=content)]
     
     elif name == "resemble_search":
@@ -526,6 +807,32 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
             output += f"{topic['description']}\n"
             output += f"**Keywords**: {', '.join(topic['keywords'][:5])}...\n\n"
         
+        return [TextContent(type="text", text=output)]
+    
+    elif name == "resemble_api_endpoint":
+        method = arguments.get("method", "GET")
+        path = arguments.get("path", "")
+        
+        result = get_openapi_endpoint(method, path)
+        if result:
+            return [TextContent(type="text", text=result)]
+        return [TextContent(type="text", text=f"Endpoint not found: {method} {path}. Use `resemble_api_search` to find available endpoints.")]
+    
+    elif name == "resemble_api_search":
+        query = arguments.get("query", "")
+        results = search_openapi_endpoints(query)
+        
+        if not results:
+            return [TextContent(type="text", text=f"No API endpoints found matching '{query}'.")]
+        
+        output = f"# API Endpoints matching '{query}'\n\n"
+        for r in results:
+            tags = f" [{', '.join(r['tags'])}]" if r['tags'] else ""
+            output += f"- **{r['method']}** `{r['path']}`{tags}\n"
+            if r['summary']:
+                output += f"  {r['summary']}\n"
+        
+        output += "\n*Use `resemble_api_endpoint` with method and path to get full details.*"
         return [TextContent(type="text", text=output)]
     
     raise ValueError(f"Unknown tool: {name}")

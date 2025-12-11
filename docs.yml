@@ -1,0 +1,422 @@
+instances:
+  - url: resemble.docs.buildwithfern.com
+    custom-domain: docs.resemble.ai
+
+title: Resemble | Documentation
+favicon: ./docs/assets/favicon-32x32.png 
+
+logo:
+  href: https://app.resemble.ai
+  dark: ./docs/assets/logo.webp
+  light: ./docs/assets/logo.webp
+  height: 40
+
+navbar-links:
+  - type: minimal
+    text: Status
+    url: https://status.resemble.ai
+
+colors:
+  accentPrimary:
+    light: "#0f5943"
+    dark:  "#4de8b8"
+
+  background:
+    light: "#FFFFFF"
+    dark:  "#000000"
+
+  border:
+    light: "#e5e9f2"
+    dark:  "#1a1a1a"
+
+  sidebar-background:
+    light: "#FFFFFF"
+    dark:  "#000000"
+
+  header-background:
+    light: "#FFFFFF"
+    dark:  "#000000"
+
+  card-background:
+    light: "#FFFFFF"
+    dark:  "#000000"
+
+layout:
+  tabs-placement: header
+  searchbar-placement: header
+
+tabs:
+  overview:
+    display-name: Overview
+    icon: compass
+  products:
+    display-name: Products
+    icon: puzzle
+  manage:
+    display-name: Manage
+    icon: folder-tree
+  api-reference:
+    display-name: API Reference
+    icon: square-terminal
+  tutorials:
+    display-name: Tutorials
+    icon: graduation-cap
+  libraries:
+    display-name: Client Libraries
+    icon: code
+
+navigation:
+  - tab: overview
+    layout:
+      - page: Welcome
+        icon: fa-solid house
+        path: ./docs/pages/index.mdx
+      - section: Get Started
+        icon: fa-solid rocket
+        contents:
+          - page: Developer Quick Start
+            path: ./docs/pages/getting-started/quickstart.mdx
+          - page: Authentication
+            path: ./docs/pages/getting-started/authentication.mdx
+          - page: Rate Limits
+            path: ./docs/pages/getting-started/rate-limits.mdx
+          - page: Error Handling
+            path: ./docs/pages/getting-started/errors.mdx
+          - page: Model Versions
+            path: ./docs/pages/getting-started/model-versions.mdx
+          - page: SSML Reference
+            path: ./docs/pages/getting-started/ssml.mdx
+  - tab: products
+    layout:
+      - section: Voice Generation
+        icon: fa-solid waveform
+        contents:
+          - section: Text to Speech
+            contents:
+              - page: Overview
+                path: ./docs/pages/voice-generation/text-to-speech/overview.mdx
+              - page: Synchronous
+                path: ./docs/pages/voice-generation/text-to-speech/synchronous.mdx
+              - page: Streaming (HTTP)
+                path: ./docs/pages/voice-generation/text-to-speech/streaming-http.mdx
+              - page: Streaming (WebSocket)
+                path: ./docs/pages/voice-generation/text-to-speech/streaming-websocket.mdx
+          - page: Speech-to-Speech
+            path: ./docs/pages/voice-generation/speech-to-speech.mdx
+      - section: Voice Creation
+        icon: fa-solid microphone
+        contents:
+          - section: Voice Cloning
+            contents:
+              - page: Overview
+                path: ./docs/pages/voice-creation/voices/clone-overview.mdx
+              - page: Create Voice
+                path: ./docs/pages/voice-creation/voices/create.mdx
+              - page: Build Voice
+                path: ./docs/pages/voice-creation/voices/build.mdx
+          - section: Voice Design
+            contents:
+              - page: Overview
+                path: ./docs/pages/voice-creation/voice-design/design-overview.mdx
+              - page: Generate Candidates
+                path: ./docs/pages/voice-creation/voice-design/generate.mdx
+              - page: Create from Candidate
+                path: ./docs/pages/voice-creation/voice-design/create-from-candidate.mdx
+      - section: Voice Tools
+        icon: fa-solid screwdriver-wrench
+        contents:
+          - section: Speech to Text
+            contents:
+              - page: Overview
+                path: ./docs/pages/voice-generation/speech-to-text/overview.mdx
+              - page: Create Transcript Job
+                path: ./docs/pages/voice-generation/speech-to-text/create.mdx
+              - page: Get Transcript Job
+                path: ./docs/pages/voice-generation/speech-to-text/get.mdx
+              - page: List Transcript Jobs
+                path: ./docs/pages/voice-generation/speech-to-text/list.mdx
+              - page: Intelligence Queries
+                path: ./docs/pages/voice-generation/speech-to-text/intelligence.mdx
+          - section: Audio Edit
+            contents:
+              - page: Overview
+                path: ./docs/pages/audio-tools/audio-edit/overview.mdx
+              - page: Create Edit
+                path: ./docs/pages/audio-tools/audio-edit/create.mdx
+              - page: List Edits
+                path: ./docs/pages/audio-tools/audio-edit/list.mdx
+              - page: Get Edit
+                path: ./docs/pages/audio-tools/audio-edit/get.mdx
+          - section: Audio Enhancement
+            contents:
+              - page: Overview
+                path: ./docs/pages/audio-tools/audio-enhancement/overview.mdx
+              - page: Create Enhancement
+                path: ./docs/pages/audio-tools/audio-enhancement/create.mdx
+              - page: List Enhancements
+                path: ./docs/pages/audio-tools/audio-enhancement/list.mdx
+              - page: Get Enhancement
+                path: ./docs/pages/audio-tools/audio-enhancement/get.mdx
+      - section: Real-Time Agents
+        icon: fa-solid robot
+        contents:
+          - page: Overview
+            path: ./docs/pages/agents/overview.mdx
+          - section: Agents API
+            contents:
+              - page: List Agents
+                path: ./docs/pages/agents/list.mdx
+              - page: Get Agent
+                path: ./docs/pages/agents/get.mdx
+              - page: Create Agent
+                path: ./docs/pages/agents/create.mdx
+              - page: Update Agent
+                path: ./docs/pages/agents/update.mdx
+              - page: Delete Agent
+                path: ./docs/pages/agents/delete.mdx
+              - page: Dispatch Agent
+                path: ./docs/pages/agents/dispatch.mdx
+              - page: Get Capabilities
+                path: ./docs/pages/agents/capabilities.mdx
+              - page: Get System Tools
+                path: ./docs/pages/agents/system-tools.mdx
+          - section: Agent Tools
+            contents:
+              - page: Overview
+                path: ./docs/pages/agents/tools/overview.mdx
+              - page: List Tools
+                path: ./docs/pages/agents/tools/list.mdx
+              - page: Get Tool
+                path: ./docs/pages/agents/tools/get.mdx
+              - page: Create Tool
+                path: ./docs/pages/agents/tools/create.mdx
+              - page: Update Tool
+                path: ./docs/pages/agents/tools/update.mdx
+              - page: Delete Tool
+                path: ./docs/pages/agents/tools/delete.mdx
+          - section: Agent Webhooks
+            contents:
+              - page: Overview
+                path: ./docs/pages/agents/webhooks/overview.mdx
+              - page: List Webhooks
+                path: ./docs/pages/agents/webhooks/list.mdx
+              - page: Get Webhook
+                path: ./docs/pages/agents/webhooks/get.mdx
+              - page: Create Webhook
+                path: ./docs/pages/agents/webhooks/create.mdx
+              - page: Update Webhook
+                path: ./docs/pages/agents/webhooks/update.mdx
+              - page: Delete Webhook
+                path: ./docs/pages/agents/webhooks/delete.mdx
+          - section: Agent Phone Numbers
+            contents:
+              - page: Overview
+                path: ./docs/pages/agents/phone-numbers/overview.mdx
+              - page: List Agent Phone Numbers
+                path: ./docs/pages/agents/phone-numbers/list.mdx
+              - page: Get Agent Phone Number
+                path: ./docs/pages/agents/phone-numbers/get.mdx
+              - page: Create Agent Phone Number
+                path: ./docs/pages/agents/phone-numbers/create.mdx
+              - page: Delete Agent Phone Number
+                path: ./docs/pages/agents/phone-numbers/delete.mdx
+              - page: Force Delete Agent Phone Number
+                path: ./docs/pages/agents/phone-numbers/force-delete.mdx
+          - section: Agent Knowledge Base
+            contents:
+              - page: Overview
+                path: ./docs/pages/agents/knowledge-base/overview.mdx
+              - page: List Knowledge Items
+                path: ./docs/pages/agents/knowledge-base/list.mdx
+              - page: Get Knowledge Item
+                path: ./docs/pages/agents/knowledge-base/get.mdx
+              - page: Create Knowledge Item
+                path: ./docs/pages/agents/knowledge-base/create.mdx
+              - page: Delete Knowledge Item
+                path: ./docs/pages/agents/knowledge-base/delete.mdx
+              - page: Re-ingest Knowledge Item
+                path: ./docs/pages/agents/knowledge-base/reingest.mdx
+              - page: List Agent's Knowledge Items
+                path: ./docs/pages/agents/knowledge-base/list-agent-knowledge-items.mdx
+              - page: Attach Knowledge Item to Agent
+                path: ./docs/pages/agents/knowledge-base/attach.mdx
+              - page: Detach Knowledge Item from Agent
+                path: ./docs/pages/agents/knowledge-base/detach.mdx
+      - section: Safety & Detection
+        icon: fa-solid shield-halved
+        contents:
+          - section: Deepfake Detection
+            contents:
+              - page: Overview
+                path: ./docs/pages/detect/overview.mdx
+              - page: Create Detection
+                path: ./docs/pages/detect/overview/create.mdx
+              - page: Get Detection
+                path: ./docs/pages/detect/overview/get.mdx
+          - section: Intelligence
+            contents:
+              - page: Overview
+                path: ./docs/pages/detect/audio-intelligence/overview.mdx
+              - page: Run Intelligence
+                path: ./docs/pages/detect/audio-intelligence/create.mdx
+          - section: Identity API
+            contents:
+              - page: Overview
+                path: ./docs/pages/detect/identity/overview.mdx
+              - page: Create Identity
+                path: ./docs/pages/detect/identity/create.mdx
+              - page: List Identities
+                path: ./docs/pages/detect/identity/list.mdx
+              - page: Search Identities
+                path: ./docs/pages/detect/identity/search.mdx
+          - section: Audio Watermarking
+            contents:
+              - page: Overview
+                path: ./docs/pages/detect/watermark/overview.mdx
+              - page: Apply Watermark
+                path: ./docs/pages/detect/watermark/apply.mdx
+              - page: Detect Watermark
+                path: ./docs/pages/detect/watermark/detect.mdx
+  - tab: manage
+    layout:
+      - section: Voices
+        icon: fa-solid microphone
+        contents:
+          - page: Overview
+            path: ./docs/pages/voice-creation/voices/overview.mdx
+          - page: List Voices
+            path: ./docs/pages/voice-creation/voices/list.mdx
+          - page: Get Voice
+            path: ./docs/pages/voice-creation/voices/get.mdx
+          - page: Delete Voice
+            path: ./docs/pages/voice-creation/voices/delete.mdx
+      - section: Recordings
+        icon: fa-solid folder-open
+        contents:
+          - page: Overview
+            path: ./docs/pages/voice-creation/recordings/overview.mdx
+          - page: List Recordings
+            path: ./docs/pages/voice-creation/recordings/list.mdx
+          - page: Get Recording
+            path: ./docs/pages/voice-creation/recordings/get.mdx
+          - page: Create Recording
+            path: ./docs/pages/voice-creation/recordings/create.mdx
+          - page: Update Recording
+            path: ./docs/pages/voice-creation/recordings/update.mdx
+          - page: Delete Recording
+            path: ./docs/pages/voice-creation/recordings/delete.mdx
+      - section: Projects & Clips
+        icon: fa-solid clapperboard
+        contents:
+          - section: Projects
+            contents:
+              - page: Overview
+                path: ./docs/pages/platform-management/projects/overview.mdx
+              - page: List Projects
+                path: ./docs/pages/platform-management/projects/list.mdx
+              - page: Get Project
+                path: ./docs/pages/platform-management/projects/get.mdx
+              - page: Create Project
+                path: ./docs/pages/platform-management/projects/create.mdx
+              - page: Update Project
+                path: ./docs/pages/platform-management/projects/update.mdx
+              - page: Delete Project
+                path: ./docs/pages/platform-management/projects/delete.mdx
+          - section: Clips
+            contents:
+              - page: Overview
+                path: ./docs/pages/platform-management/clips/overview.mdx
+              - page: List Clips
+                path: ./docs/pages/platform-management/clips/list.mdx
+              - page: Get Clip
+                path: ./docs/pages/platform-management/clips/get.mdx
+              - page: Update Clip
+                path: ./docs/pages/platform-management/clips/update.mdx
+              - page: Delete Clip
+                path: ./docs/pages/platform-management/clips/delete.mdx
+              - page: Clip Timestamps
+                path: ./docs/pages/platform-management/clips/timestamps.mdx
+      - section: Voice Settings
+        icon: fa-solid sliders
+        contents:
+          - page: Overview
+            path: ./docs/pages/platform-management/voice-settings-presets/overview.mdx
+          - page: List Presets
+            path: ./docs/pages/platform-management/voice-settings-presets/list.mdx
+          - page: Get Preset
+            path: ./docs/pages/platform-management/voice-settings-presets/get.mdx
+          - page: Create Preset
+            path: ./docs/pages/platform-management/voice-settings-presets/create.mdx
+          - page: Update Preset
+            path: ./docs/pages/platform-management/voice-settings-presets/update.mdx
+          - page: Delete Preset
+            path: ./docs/pages/platform-management/voice-settings-presets/delete.mdx
+      - section: Account & Billing
+        icon: fa-solid id-card
+        contents:
+          - page: Overview
+            path: ./docs/pages/platform-management/account/overview.mdx
+          - page: Get Account
+            path: ./docs/pages/platform-management/account/get.mdx
+          - page: Teams
+            path: ./docs/pages/platform-management/account/teams.mdx
+          - page: Billing Usage
+            path: ./docs/pages/platform-management/account/billing-usage.mdx
+  - tab: api-reference
+    layout:
+      - api: API Reference
+        skip-slug: true
+  - tab: tutorials
+    layout:
+      - page: Overview
+        path: ./docs/pages/guides/index.mdx
+      - section: Quickstarts
+        contents:
+          - page: Synthesize Your First Clip
+            path: ./docs/pages/guides/creating-clips/getting-started.mdx
+          - page: Prompted Synthesis
+            path: ./docs/pages/guides/prompt-generation/getting-started.mdx
+      - section: Voice Creation
+        contents:
+          - section: From Dataset
+            contents:
+              - page: Getting Started
+                path: ./docs/pages/guides/custom-voice-dataset/getting-started.mdx
+              - page: Node.js Example
+                path: ./docs/pages/guides/custom-voice-dataset/nodejs.mdx
+              - page: Python Example
+                path: ./docs/pages/guides/custom-voice-dataset/python.mdx
+          - section: From Recordings
+            contents:
+              - page: Getting Started
+                path: ./docs/pages/guides/custom-voice-recordings/getting-started.mdx
+              - page: Node.js Example
+                path: ./docs/pages/guides/custom-voice-recordings/nodejs.mdx
+              - page: Python Example
+                path: ./docs/pages/guides/custom-voice-recordings/python.mdx
+          - page: Voice Design Guide
+            path: ./docs/pages/guides/voice-design/how-to-create.mdx
+      - section: WebSocket Streaming
+        contents:
+          - page: Getting Started
+            path: ./docs/pages/guides/creating-clips/websocket-streaming/getting-started.mdx
+          - page: Receiving Audio Data
+            path: ./docs/pages/guides/creating-clips/websocket-streaming/receiving-audio.mdx
+          - page: Python Example
+            path: ./docs/pages/guides/creating-clips/websocket-streaming/python-example.mdx
+          - page: Error Handling
+            path: ./docs/pages/guides/creating-clips/websocket-streaming/error-handling.mdx
+      - section: Prompt Engineering
+        contents:
+          - page: Voice Design Prompting
+            path: ./docs/pages/guides/voice-design/how-to-prompt.mdx
+          - page: SSML Prompts
+            path: ./docs/pages/guides/prompt-generation/generate-audio.mdx
+  - tab: libraries
+    layout:
+      - page: Overview
+        path: ./docs/pages/libraries/index.mdx
+      - page: Node.js SDK
+        path: ./docs/pages/libraries/node.mdx
+      - page: Python SDK
+        path: ./docs/pages/libraries/python.mdx
