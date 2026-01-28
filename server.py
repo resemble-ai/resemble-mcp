@@ -3,8 +3,18 @@ Resemble AI Documentation MCP Server
 
 Provides intelligent access to Resemble AI documentation for AI coding assistants.
 Designed for minimal tool calls - get comprehensive answers in a single request.
+
+Supports two transport modes:
+- stdio: For local MCP clients (default)
+- sse: For remote HTTP access (Lovable, Replit, etc.)
+
+Usage:
+    python server.py          # stdio mode (default)
+    python server.py --sse    # SSE mode on PORT (default 8000)
 """
 
+import os
+import sys
 import json
 import asyncio
 import yaml
@@ -842,8 +852,8 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 # MAIN
 # =============================================================================
 
-async def main():
-    """Run the MCP server."""
+async def run_stdio():
+    """Run the MCP server in stdio mode."""
     async with stdio_server() as (read_stream, write_stream):
         await app.run(
             read_stream,
@@ -852,5 +862,68 @@ async def main():
         )
 
 
+def run_sse():
+    """Run the MCP server in SSE mode for remote access."""
+    from starlette.applications import Starlette
+    from starlette.routing import Route, Mount
+    from starlette.responses import JSONResponse, Response
+    from starlette.middleware import Middleware
+    from starlette.middleware.cors import CORSMiddleware
+    from mcp.server.sse import SseServerTransport
+    import uvicorn
+
+    # Create SSE transport
+    sse = SseServerTransport("/messages/")
+
+    async def handle_sse(request):
+        """Handle SSE connection."""
+        async with sse.connect_sse(
+            request.scope, request.receive, request._send
+        ) as streams:
+            await app.run(
+                streams[0],
+                streams[1],
+                app.create_initialization_options()
+            )
+        return Response()
+
+    async def health(request):
+        """Health check endpoint for Render/deployment platforms."""
+        return JSONResponse({"status": "healthy", "server": "resemble-ai-docs"})
+
+    # Create Starlette app with CORS middleware
+    starlette_app = Starlette(
+        debug=False,
+        routes=[
+            Route("/health", health, methods=["GET"]),
+            Route("/sse", handle_sse, methods=["GET"]),
+            Mount("/messages/", app=sse.handle_post_message),
+        ],
+        middleware=[
+            Middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+                expose_headers=["Mcp-Session-Id"],
+            )
+        ],
+    )
+
+    # Get port from environment (Render sets this)
+    port = int(os.environ.get("PORT", 8000))
+
+    print(f"Starting Resemble AI Docs MCP Server (SSE mode)")
+    print(f"Health check: http://0.0.0.0:{port}/health")
+    print(f"SSE endpoint: http://0.0.0.0:{port}/sse")
+    print(f"Messages endpoint: http://0.0.0.0:{port}/messages/")
+
+    uvicorn.run(starlette_app, host="0.0.0.0", port=port)
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    if "--sse" in sys.argv or os.environ.get("MCP_TRANSPORT") == "sse":
+        run_sse()
+    else:
+        asyncio.run(run_stdio())
