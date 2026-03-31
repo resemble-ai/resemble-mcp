@@ -15,6 +15,7 @@ curl --request POST 'https://app.resemble.ai/api/v2/detect' \
   --data '{
     "url": "https://example.com/media.mp4",
     "callback_url": "https://example.com/webhooks/detect",
+    "intelligence": true,
     "visualize": true,
     "frame_length": 2
   }'
@@ -34,10 +35,14 @@ curl --request POST 'https://app.resemble.ai/api/v2/detect' \
 | `visualize` | All | Generate visualization artifacts (images/treeview). |
 | `frame_length` | Audio & Video | Window size in seconds (`1`–`4`, default `2`). |
 | `start_region` / `end_region` | Audio & Video | Analyze a segment (seconds). |
-| `pipeline` | Image & Video | Sequence of detectors (`general`, `facial`, `object`) separated by `->`. Default `general->facial->object`. |
 | `max_video_fps` | Video | Downsample high-frame-rate media. |
 | `max_video_secs` | Video | Cap processed duration. |
 | `model_types` | Video | `image` or `talking_head`. Use `talking_head` for face-swaps. |
+| `intelligence` | All | Boolean. Run multimodal intelligence analysis on the media. Returns speaker info, transcription, emotion, abnormalities, misinformation, and anti-cheating indicators. Default: `false`. |
+| `audio_source_tracing` | Audio | Boolean. Enable audio source tracing to identify the origin of synthetic audio (e.g., Resemble AI, ElevenLabs). Default: `false`. |
+| `use_reverse_search` | Image | Boolean. Enable reverse image search to improve detection accuracy. Searches the web for matching images and uses AI to classify whether the match indicates a known fake. Default: `false`. |
+| `use_ood_detector` | Audio | Boolean. Enable out-of-distribution detection. Default: `false`. |
+| `zero_retention_mode` | All | Boolean. Enable zero retention mode to automatically delete the submitted media file after detection completes. When enabled, media URLs are redacted from all responses and the filename is tokenized. Default: `false`. |
 
 ## Response
 
@@ -53,7 +58,8 @@ By default, the API responds immediately while processing continues in the backg
     "metrics": {},
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:00Z",
-    "media_type": "audio"
+    "media_type": "audio",
+    "intelligence": null
   }
 }
 ```
@@ -81,7 +87,11 @@ When using the `Prefer: wait` header, the API returns complete results immediate
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:05Z",
     "duration": "5.2",
-    "media_type": "audio"
+    "media_type": "audio",
+    "intelligence": {
+      "description": "Adult male speaker with confident tone...",
+      "created_at": "2024-01-15T10:30:05Z"
+    }
   }
 }
 ```
@@ -97,15 +107,114 @@ When using the `Prefer: wait` header, the API returns complete results immediate
     "created_at": "2024-01-15T10:30:00Z",
     "updated_at": "2024-01-15T10:30:02Z",
     "url": "https://example.com/image.jpg",
-    "duration": "0",
+    "duration": "5.0",
     "media_type": "image",
     "image_metrics": {
-      "type": "facial",
+      "ifl": {
+        "score": 1,
+        "heatmap": "https://..."
+      },
+      "type": "FinalResult",
       "image": "https://...",
-      "label": "fake",
-      "score": 0.92,
+      "label": "Fake",
+      "score": 1,
       "children": []
-    }
+    },
+    "intelligence": {
+      "uuid": "INTELLIGENCE_UUID",
+      "description": "...",
+      "created_at": "2024-01-15T10:30:02Z",
+      "detect_uuid": "DETECTION_UUID"
+    },
+    "visualize": false,
+    "audio_source_tracing_enabled": false,
+    "use_ood_detector": false,
+    "filename": "image.jpg",
+    "extra_params": {
+      "search_identity_requested": false
+    },
+    "status": "completed",
+    "audio_url": "https://example.com/image.jpg",
+    "zero_retention_mode": false,
+    "media_redacted": false,
+    "media_deleted": false
+  }
+}
+```
+
+#### Image File Response (with Reverse Image Search)
+
+When `use_reverse_search` is enabled, the `image_metrics` object includes a `reverse_image_search_sources` array containing web sources that matched the submitted image, along with a verdict and similarity score for each:
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/detect' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Prefer: wait' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/image.jpg",
+    "intelligence": true,
+    "use_reverse_search": true
+  }'
+```
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "metrics": {},
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:12Z",
+    "url": "https://example.com/image.jpg",
+    "duration": "5.0",
+    "media_type": "image",
+    "image_metrics": {
+      "ifl": {
+        "score": 1,
+        "heatmap": "https://..."
+      },
+      "type": "FinalResult",
+      "image": "https://...",
+      "label": "Fake",
+      "score": 1,
+      "children": [],
+      "reverse_image_search_sources": [
+        {
+          "url": "https://example-stock-site.com/ai-generated-images/",
+          "title": "example-stock-site.com",
+          "reason": "This exact image is hosted on a stock photography site and labeled as a 'Premium AI-generated image'.",
+          "verdict": "known_fake",
+          "similarity": 1
+        },
+        {
+          "url": "https://another-stock-site.com/search/ai-art",
+          "title": "another-stock-site.com",
+          "reason": "The site lists near-identical variations of this image, explicitly labeling them as AI generated.",
+          "verdict": "known_fake",
+          "similarity": 0.9
+        }
+      ]
+    },
+    "intelligence": {
+      "uuid": "INTELLIGENCE_UUID",
+      "description": "...",
+      "created_at": "2024-01-15T10:30:12Z",
+      "detect_uuid": "DETECTION_UUID"
+    },
+    "visualize": false,
+    "audio_source_tracing_enabled": false,
+    "use_ood_detector": false,
+    "filename": "image.jpg",
+    "extra_params": {
+      "use_reverse_search": true,
+      "search_identity_requested": false
+    },
+    "status": "completed",
+    "audio_url": "https://example.com/image.jpg",
+    "zero_retention_mode": false,
+    "media_redacted": false,
+    "media_deleted": false
   }
 }
 ```
@@ -161,11 +270,81 @@ When using the `Prefer: wait` header, the API returns complete results immediate
           ]
         }
       ]
+    },
+    "intelligence": {
+      "description": "Video contains an adult male speaker with confident tone...",
+      "created_at": "2024-01-15T10:30:10Z"
     }
   }
 }
 ```
 
+### Zero Retention Mode
+
+When `zero_retention_mode=true`, the API enables a privacy lifecycle for the submitted media:
+
+- **URL redaction**: `url` and `audio_url` are set to `null` in all responses, both during processing and after completion.
+- **Filename tokenization**: The original filename is replaced with a tokenized value (e.g., `redacted_abc123def4567890abcd1234.mp3`).
+- **Media deletion**: After detection completes (including any downstream tasks like intelligence or source tracing), the uploaded file is permanently deleted from storage. The `file_deleted_at` timestamp is set once the purge succeeds.
+- **Downstream records**: Related records (intelligence, source tracing, identity) are still created but do not store copies of the media.
+
+Zero Retention Mode is request-driven only — team-level or UI defaults are not applied to API requests. You must explicitly pass `zero_retention_mode: true` on each request.
+
+#### Zero Retention Mode Request Example
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/detect' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Prefer: wait' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/media.mp4",
+    "zero_retention_mode": true,
+    "intelligence": true
+  }'
+```
+
+#### Zero Retention Mode Response Example
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "zero_retention_mode": true,
+    "media_redacted": true,
+    "media_deleted": false,
+    "file_deleted_at": null,
+    "url": null,
+    "audio_url": null,
+    "filename": "redacted_abc123def4567890abcd1234.mp3",
+    "metrics": {
+      "label": "fake",
+      "score": ["0.9", "0.8", "0.7"],
+      "consistency": "0.85",
+      "aggregated_score": "0.80"
+    },
+    "media_type": "audio",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:05Z"
+  }
+}
+```
+
+Once the media file has been purged, `media_deleted` becomes `true` and `file_deleted_at` is populated:
+
+```json
+{
+  "zero_retention_mode": true,
+  "media_redacted": true,
+  "media_deleted": true,
+  "file_deleted_at": "2024-01-15T10:31:00Z",
+  "url": null,
+  "audio_url": null,
+  "filename": "redacted_abc123def4567890abcd1234.mp3"
+}
+```
+
 ### Callback URL
 
-If you provide a `callback_url` when submitting a media file, you will receive a POST request to that URL with the same payload structure as the synchronous response shown above.
+If you provide a `callback_url` when submitting a media file, you will receive a POST request to that URL with the same payload structure as the synchronous response shown above. When intelligence analysis was requested, the callback payload will include the `intelligence` field with the analysis results.

@@ -324,6 +324,96 @@ const substitutionUuid = '...';
 await Resemble.v2.termSubstitutions.delete(substitutionUuid);
 ```
 
+## Deepfake Detection
+
+### Create a Detection (URL)
+
+```ts
+const callbackUrl = 'https://example.com/webhooks/detect';
+
+const response = await Resemble.v2.detection.create({
+  url: 'https://storage.googleapis.com/resemble-ai-docs-public-files/sts-donor-example.wav',
+  callback_url: callbackUrl,
+  visualize: true,
+  frame_length: 4,
+  start_region: 0,
+  end_region: 10,
+  intelligence: true,
+  audio_source_tracing: true,
+  use_ood_detector: true
+});
+
+// Full API response
+console.log(JSON.stringify(response, null, 2));
+
+// Parsed values
+const result = response.item;
+const detectionUuid = response.item?.uuid;
+const status = response.item?.status;
+```
+
+### Create and Get a Detection (URL)
+
+```ts
+const callbackUrl = 'https://example.com/webhooks/detect';
+
+const response = await Resemble.v2.detection.detectAndGet({
+  url: 'https://storage.googleapis.com/resemble-ai-docs-public-files/sts-donor-example.wav',
+  callback_url: callbackUrl,
+  visualize: true,
+  frame_length: 1,
+  start_region: 0,
+  end_region: 10,
+  intelligence: true,
+  audio_source_tracing: true,
+  use_ood_detector: true
+});
+
+// Full API response
+console.log(JSON.stringify(response, null, 2));
+
+// Parsed values
+const result = response.item;
+const status = response.item?.status;
+```
+
+### Create and Get a Detection (File Upload)
+
+```ts
+import fs from 'fs';
+import path from 'path';
+
+const callbackUrl = 'https://example.com/webhooks/detect';
+const filePath = path.resolve('path/to/local-audio.wav');
+
+if (!fs.existsSync(filePath)) {
+  throw new Error(`File not found: ${filePath}`);
+}
+
+const response = await Resemble.v2.detection.detectAndGet(
+  {
+    file: filePath,
+    callback_url: callbackUrl,
+    visualize: true,
+    frame_length: 4,
+    start_region: 0,
+    end_region: 10,
+    intelligence: true,
+    audio_source_tracing: true,
+    use_ood_detector: true
+  },
+  10, // maxAttempts
+  3   // waitTimeSeconds
+);
+
+// Full API response
+console.log(JSON.stringify(response, null, 2));
+
+// Parsed values
+const result = response.item;
+const status = response.item?.status;
+```
+
 ## Additional Resources
 
 - [Creating Clips Guide](/guides/creating-clips/nodejs) - Step-by-step tutorial

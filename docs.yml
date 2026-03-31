@@ -253,12 +253,34 @@ navigation:
                 path: ./docs/pages/detect/overview/create.mdx
               - page: Get Detection
                 path: ./docs/pages/detect/overview/get.mdx
+              - page: List Detects
+                path: ./docs/pages/detect/overview/list.mdx
+              - section: Detect Intelligence
+                contents:
+                  - page: Overview
+                    path: ./docs/pages/detect/detect-intelligence/overview.mdx
+                  - page: Ask a Question
+                    path: ./docs/pages/detect/detect-intelligence/create.mdx
+                  - page: Get Answer
+                    path: ./docs/pages/detect/detect-intelligence/get.mdx
           - section: Intelligence
             contents:
               - page: Overview
-                path: ./docs/pages/detect/audio-intelligence/overview.mdx
+                path: ./docs/pages/detect/intelligence/overview.mdx
               - page: Run Intelligence
-                path: ./docs/pages/detect/audio-intelligence/create.mdx
+                path: ./docs/pages/detect/intelligence/create.mdx
+              - page: List Intelligences
+                path: ./docs/pages/detect/intelligence/list.mdx
+              - page: Get Intelligence
+                path: ./docs/pages/detect/intelligence/get.mdx
+          - section: Audio Source Tracing
+            contents:
+              - page: Overview
+                path: ./docs/pages/detect/audio-source-tracing/overview.mdx
+              - page: List Audio Source Tracings
+                path: ./docs/pages/detect/audio-source-tracing/list.mdx
+              - page: Get Audio Source Tracing
+                path: ./docs/pages/detect/audio-source-tracing/get.mdx
           - section: Identity API
             contents:
               - page: Overview
@@ -269,7 +291,7 @@ navigation:
                 path: ./docs/pages/detect/identity/list.mdx
               - page: Search Identities
                 path: ./docs/pages/detect/identity/search.mdx
-          - section: Audio Watermarking
+          - section: Watermarking
             contents:
               - page: Overview
                 path: ./docs/pages/detect/watermark/overview.mdx
@@ -351,6 +373,23 @@ navigation:
             path: ./docs/pages/platform-management/voice-settings-presets/update.mdx
           - page: Delete Preset
             path: ./docs/pages/platform-management/voice-settings-presets/delete.mdx
+      - section: Custom Pronunciations
+        icon: fa-solid spell-check
+        contents:
+          - page: Overview
+            path: ./docs/pages/platform-management/custom-pronunciations/overview.mdx
+          - page: Create Pronunciation
+            path: ./docs/pages/platform-management/custom-pronunciations/create.mdx
+          - page: Bulk Create from ZIP
+            path: ./docs/pages/platform-management/custom-pronunciations/bulk-create.mdx
+          - page: List Pronunciations
+            path: ./docs/pages/platform-management/custom-pronunciations/list.mdx
+          - page: Get Pronunciation
+            path: ./docs/pages/platform-management/custom-pronunciations/get.mdx
+          - page: Toggle Active Status
+            path: ./docs/pages/platform-management/custom-pronunciations/toggle-active.mdx
+          - page: Delete Pronunciation
+            path: ./docs/pages/platform-management/custom-pronunciations/delete.mdx
       - section: Account & Billing
         icon: fa-solid id-card
         contents:

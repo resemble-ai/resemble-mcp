@@ -1,21 +1,39 @@
 ---
-title: Audio Watermarking
+title: Watermarking
 slug: /detect/watermark
 ---
 
 > **Beta:** Watermark API is currently in beta. Please [contact us](https://www.resemble.ai/schedule-a-demo/?utm_source=resemble_docs_watermark) if you would like to be added to the beta program.
 
-The Resemble Watermark API allows you to apply and detect watermarks on audio files. These endpoints provide functionality to apply and detect watermarks, and you can access the results of these operations through dedicated result endpoints.
+The Resemble Watermark API allows you to apply and detect watermarks on audio, image, and video files. The media type is automatically detected from the file URL. These endpoints provide functionality to apply and detect watermarks, and you can access the results of these operations through dedicated result endpoints.
+
+## Supported Media Types
+
+| Media Type | Supported Formats | Additional Parameters |
+| --- | --- | --- |
+| Audio | WAV, MP3, and other audio formats | — |
+| Image | PNG, JPEG, and other image formats | `strength`, `custom_message` |
+| Video | MP4, MOV, and other video formats | `strength`, `custom_message` |
+
+## Synchronous Mode
+
+By default, processing is asynchronous and you must poll the result endpoint. To receive the result in a single request, include the `Prefer: wait` header. The API will wait for processing to complete before returning the response.
 
 ```ts
 interface ApplyRequest {
   url: string;
+  strength?: number;       // Image/Video only (0.0-1.0, default: 0.2)
+  custom_message?: string; // Image/Video only (default: "resembleai")
 }
 
 interface ApplyResult {
   success: boolean;
   item: {
     uuid: string;
+    media_type: "audio" | "image" | "video";
+    source_media_url: string;
+    watermarked_media: string | null;
+    metrics: object | null;
     created_at: string;
     updated_at: string;
   };
@@ -23,12 +41,17 @@ interface ApplyResult {
 
 interface DetectRequest {
   url: string;
+  custom_message?: string; // Image/Video only (default: "resembleai")
 }
 
 interface DetectResult {
   success: boolean;
   item: {
     uuid: string;
+    media_type: "audio" | "image" | "video";
+    source_media_url: string;
+    watermarked_media: string | null;
+    metrics: object | null;
     created_at: string;
     updated_at: string;
   };

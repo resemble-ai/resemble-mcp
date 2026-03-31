@@ -1,0 +1,21 @@
+---
+title: Delete Pronunciation
+slug: /platform-management/custom-pronunciations/delete
+---
+
+`DELETE https://app.resemble.ai/api/v2/pronunciations/{uuid}`
+
+Permanently remove a custom pronunciation. The pronunciation is removed immediately and subsequent synthesis requests will no longer use it.
+
+```bash
+curl -X DELETE "https://app.resemble.ai/api/v2/pronunciations/a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "success": true
+}
+```

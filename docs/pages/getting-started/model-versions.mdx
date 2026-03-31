@@ -7,21 +7,23 @@ All voices you clone with Resemble automatically use **Chatterbox**, our latest 
 
 ## Resemble Chatterbox
 
-Chatterbox is available in two variants:
+Chatterbox is available in three variants:
 
-| Variant | Version Code | Description | Dataset Requirements | Streaming Support |
-| --- | --- | --- | --- | --- |
-| Chatterbox | `tts-v4` | Next-generation TTS model offering improved performance and efficiency. | 10+ seconds | ✅ Yes |
-| Chatterbox Multilingual | `tts-v4` | Multilingual TTS supporting 23 languages with high-quality performance. | 10+ seconds | ✅ Yes |
+| Variant                 | Version Code   | Description                                                             | Dataset Requirements | Streaming Support |
+| ----------------------- | -------------- | ----------------------------------------------------------------------- | -------------------- | ----------------- |
+| Chatterbox              | `tts-v4`       | Next-generation TTS model offering improved performance and efficiency. | 10+ seconds          | ✅ Yes            |
+| Chatterbox-Turbo        | `tts-v4-turbo` | Most efficient model with native paralinguistic tag support.            | 10+ seconds          | ✅ Yes            |
+| Chatterbox Multilingual | `tts-v4`       | Multilingual TTS supporting 23 languages with high-quality performance. | 10+ seconds          | ✅ Yes            |
 
 ### Performance
 
-| Variant | Latency / TTFS* | Character Limits | Notes |
-| --- | --- | --- | --- |
-| Chatterbox | 250ms | Maximum 2000 characters. | SSML Tags Not Supported: `<prosody>`, `<emotion>`, `<phonemes>`, `<substitutions>`, `<emphasis>`, `<say-as>`. Timestamps not supported. |
-| Chatterbox Multilingual | 250ms | Maximum 2000 characters. | Same limitations as Chatterbox. Supported languages: es, en, fr, de, ar, pt, ru, tr, it, da, fi, ja, ko, zh, nl, sk, sv, vi, no, pl, sw, hi, he. |
+| Variant                 | Latency / TTFS\* | Character Limits         | Notes                                                                                                                                                                                                                                                                                                                                             |
+| ----------------------- | ---------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chatterbox              | 250ms            | Maximum 2000 characters. | SSML Tags Not Supported: `<prosody>`, `<emotion>`, `<phonemes>`, `<substitutions>`, `<emphasis>`, `<say-as>`. Timestamps not supported.                                                                                                                                                                                                           |
+| Chatterbox-Turbo        | 200ms            | Maximum 2000 characters. | **Native paralinguistic tag support:** Use `[cough]`, `[laugh]`, `[chuckle]`, and more for added realism. Optimized for low-latency voice agents, narration, and creative workflows. Compatible with Pre Built Library Voices and Rapid English voices only. **Not supported with Chatterbox Multilingual.** Same SSML limitations as Chatterbox. |
+| Chatterbox Multilingual | 250ms            | Maximum 2000 characters. | Same limitations as Chatterbox. Supported languages: es, en, fr, de, ar, pt, ru, tr, it, da, fi, ja, ko, zh, nl, sk, sv, vi, no, pl, sw, hi, he.                                                                                                                                                                                                  |
 
-> **Note:** *Time-to-first-sound (TTFS) reflects best-case numbers. Cold starts, network latency, and load can increase actual latency.*
+> **Note:** _Time-to-first-sound (TTFS) reflects best-case numbers. Cold starts, network latency, and load can increase actual latency._
 
 ## Deprecated Models
 
@@ -29,19 +31,19 @@ The following models are deprecated and no longer available for new voice clonin
 
 <Accordion title="Deprecated Text-to-Speech Models">
 
-| Version Name | Version Code | Description | Dataset Requirements | Streaming Support | Release Date |
-| --- | --- | --- | --- | --- | --- |
-| Resemble Enhanced TTS v3 | `tts-v3` | Enhanced TTS with excellent latency and fidelity. | 10+ minutes | ✅ Yes | Q4 2023 |
-| Resemble Enhanced TTS v2 | `tts-v2` | Enhanced model with lower latency and high naturalness. | 30+ minutes | ✅ Yes | Q3 2023 |
-| Resemble Enhanced TTS v1 | `tts-v1` | First enhanced model delivering state-of-the-art naturalness. | 10+ minutes | 🚫 No | Q2 2023 |
-| Resemble Legacy TTS | `tts-legacy` | First-generation TTS balancing speed and quality. | 1+ minutes | ✅ Yes | Q2 2021 |
+| Version Name             | Version Code | Description                                                   | Dataset Requirements | Streaming Support | Release Date |
+| ------------------------ | ------------ | ------------------------------------------------------------- | -------------------- | ----------------- | ------------ |
+| Resemble Enhanced TTS v3 | `tts-v3`     | Enhanced TTS with excellent latency and fidelity.             | 10+ minutes          | ✅ Yes            | Q4 2023      |
+| Resemble Enhanced TTS v2 | `tts-v2`     | Enhanced model with lower latency and high naturalness.       | 30+ minutes          | ✅ Yes            | Q3 2023      |
+| Resemble Enhanced TTS v1 | `tts-v1`     | First enhanced model delivering state-of-the-art naturalness. | 10+ minutes          | 🚫 No             | Q2 2023      |
+| Resemble Legacy TTS      | `tts-legacy` | First-generation TTS balancing speed and quality.             | 1+ minutes           | ✅ Yes            | Q2 2021      |
 
 </Accordion>
 
 ## Speech-to-Speech Models
 
-| Version Name | Version Code | Description | Dataset Requirements | Streaming Support | Release Date |
-| --- | --- | --- | --- | --- | --- |
-| Resemble Core STS v2 | `sts-v2` | Improved pitch tracking and 48 kHz support. | 10+ minutes | ✅ Yes | Q4 2023 |
-| Resemble Core STS v1 | `sts-v1` | Enhanced conversion with better speed and accuracy. | 10+ minutes | ✅ Yes | Q2 2023 |
-| Resemble Legacy STS | `sts-legacy` | Initial speech-to-speech model for basic voice conversion. | 10+ minutes | ✅ Yes | Q2 2021 |
+| Version Name         | Version Code | Description                                                | Dataset Requirements | Streaming Support | Release Date |
+| -------------------- | ------------ | ---------------------------------------------------------- | -------------------- | ----------------- | ------------ |
+| Resemble Core STS v2 | `sts-v2`     | Improved pitch tracking and 48 kHz support.                | 10+ minutes          | ✅ Yes            | Q4 2023      |
+| Resemble Core STS v1 | `sts-v1`     | Enhanced conversion with better speed and accuracy.        | 10+ minutes          | ✅ Yes            | Q2 2023      |
+| Resemble Legacy STS  | `sts-legacy` | Initial speech-to-speech model for basic voice conversion. | 10+ minutes          | ✅ Yes            | Q2 2021      |

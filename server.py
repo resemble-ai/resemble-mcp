@@ -296,20 +296,35 @@ TOPICS = {
         "keywords": ["stream", "streaming", "websocket", "real-time", "realtime", "low latency"]
     },
     "detect": {
-        "name": "Deepfake Detection & Watermarking",
-        "description": "Detect AI-generated audio, apply/detect watermarks, and verify identity",
+        "name": "Deepfake Detection & Safety",
+        "description": "Detect AI-generated audio, apply/detect watermarks, verify identity, audio source tracing, and intelligence analysis",
         "pages": [
             "detect/overview",
             "detect/overview/create",
             "detect/overview/get",
+            "detect/overview/list",
+            "detect/detect-intelligence/overview",
+            "detect/detect-intelligence/create",
+            "detect/detect-intelligence/get",
+            "detect/intelligence/overview",
+            "detect/intelligence/create",
+            "detect/intelligence/list",
+            "detect/intelligence/get",
+            "detect/audio-source-tracing/overview",
+            "detect/audio-source-tracing/list",
+            "detect/audio-source-tracing/get",
+            "detect/identity/overview",
+            "detect/identity/create",
+            "detect/identity/list",
+            "detect/identity/search",
             "detect/watermark/overview",
             "detect/watermark/apply",
             "detect/watermark/detect",
-            "detect/identity/overview",
         ],
-        "keywords": ["detect", "deepfake", "fake", "watermark", "watermarking", "audio watermark", 
+        "keywords": ["detect", "deepfake", "fake", "watermark", "watermarking", "audio watermark",
                      "identity", "verify", "authentic", "synthetic", "ai detection", "apply watermark",
-                     "detect watermark"]
+                     "detect watermark", "intelligence", "audio intelligence", "source tracing",
+                     "audio source tracing"]
     },
     "agents": {
         "name": "AI Agents",
@@ -367,6 +382,67 @@ TOPICS = {
             "getting-started/ssml",
         ],
         "keywords": ["ssml", "markup", "prosody", "emphasis", "break", "pause", "phoneme"]
+    },
+    "custom-pronunciations": {
+        "name": "Custom Pronunciations",
+        "description": "Manage custom pronunciation rules with audio samples or bulk ZIP imports",
+        "pages": [
+            "platform-management/custom-pronunciations/overview",
+            "platform-management/custom-pronunciations/create",
+            "platform-management/custom-pronunciations/bulk-create",
+            "platform-management/custom-pronunciations/list",
+            "platform-management/custom-pronunciations/get",
+            "platform-management/custom-pronunciations/toggle-active",
+            "platform-management/custom-pronunciations/delete",
+        ],
+        "keywords": ["pronunciation", "pronounce", "phoneme", "phonemes", "custom pronunciation",
+                     "term substitution", "substitution", "bulk", "zip"]
+    },
+    "duets": {
+        "name": "Duets",
+        "description": "Generate multi-speaker conversational audio with duet voices and voice pairs",
+        "pages": [
+            "duets/duet-api",
+        ],
+        "keywords": ["duet", "duets", "multi-speaker", "conversation", "dialogue", "voice pair",
+                     "duet voice", "conversational audio"]
+    },
+    "account": {
+        "name": "Account & Billing",
+        "description": "Account management, teams, and billing usage",
+        "pages": [
+            "platform-management/account/overview",
+            "platform-management/account/get",
+            "platform-management/account/teams",
+            "platform-management/account/billing-usage",
+        ],
+        "keywords": ["account", "billing", "usage", "team", "teams", "plan", "subscription"]
+    },
+    "voice-settings": {
+        "name": "Voice Settings Presets",
+        "description": "Create and manage reusable voice settings presets for synthesis",
+        "pages": [
+            "platform-management/voice-settings-presets/overview",
+            "platform-management/voice-settings-presets/list",
+            "platform-management/voice-settings-presets/get",
+            "platform-management/voice-settings-presets/create",
+            "platform-management/voice-settings-presets/update",
+            "platform-management/voice-settings-presets/delete",
+        ],
+        "keywords": ["voice settings", "preset", "presets", "pace", "temperature", "pitch",
+                     "exaggeration", "hd", "voice config"]
+    },
+    "term-substitutions": {
+        "name": "Term Substitutions",
+        "description": "Define automatic text-to-pronunciation replacements for synthesis",
+        "pages": [
+            "platform-management/custom-pronunciations/overview",
+            "platform-management/custom-pronunciations/create",
+            "platform-management/custom-pronunciations/list",
+            "platform-management/custom-pronunciations/get",
+            "platform-management/custom-pronunciations/delete",
+        ],
+        "keywords": ["term", "substitution", "replacement", "replace text", "pronunciation rule"]
     },
 }
 
@@ -617,18 +693,24 @@ Topics (use these IDs or related keywords):
 - getting-started: auth, api key, quickstart, rate limit
 - voice-design: design voice, generate voice, candidate
 - streaming: websocket, real-time, low latency
-- detect: deepfake, watermark, identity, verify, authentic
+- detect: deepfake, watermark, identity, source tracing, intelligence
 - agents: conversational, phone, call, webhook, knowledge base
 - sdks: python, node, npm, pip, library
 - projects-clips: project, clip, manage
 - audio-tools: enhance, edit, improve audio
 - ssml: markup, prosody, emphasis, phoneme
+- custom-pronunciations: pronunciation, phoneme, bulk, zip
+- duets: multi-speaker, conversation, dialogue, voice pair
+- account: billing, usage, team, subscription
+- voice-settings: preset, pace, temperature, pitch, exaggeration
+- term-substitutions: term, substitution, replacement
 
 Examples:
 - "voice-cloning" → Everything about cloning voices
 - "watermark" → Watermarking docs (matched via 'detect' topic)
 - "tts" → Text-to-speech documentation
-- "transcribe" → Speech-to-text documentation""",
+- "pronunciation" → Custom pronunciations documentation
+- "duets" → Multi-speaker conversational audio""",
             inputSchema={
                 "type": "object",
                 "properties": {

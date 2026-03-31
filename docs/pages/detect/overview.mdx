@@ -17,6 +17,11 @@ interface DetectionRequest {
   end_region?: number;
   max_video_fps?: number;
   max_video_secs?: number;
+  intelligence?: boolean;
+  audio_source_tracing?: boolean;
+  use_reverse_search?: boolean; // image only
+  use_ood_detector?: boolean;
+  zero_retention_mode?: boolean;
 }
 ```
 
@@ -31,7 +36,29 @@ interface BaseDetectionResult {
     updated_at: string;
     duration: string;
     media_type: string;
+    status: string; // "processing" | "completed" | "failed"
     url?: string;
+    audio_url?: string; // alias of url
+    filename?: string;
+    zero_retention_mode: boolean;
+    media_redacted: boolean;
+    media_deleted: boolean;
+    file_deleted_at: string | null;
+    visualize?: boolean;
+    audio_source_tracing_enabled?: boolean;
+    use_ood_detector?: boolean;
+    extra_params?: object;
+    error_message?: string;
+    intelligence?: {
+      uuid?: string;
+      description: string | IntelligenceDetails | null;
+      created_at: string;
+      detect_uuid?: string;
+    } | null;
+    audio_source_tracing?: {
+      label: string;
+      error_message: string | null;
+    } | null;
   };
 }
 
@@ -55,6 +82,17 @@ interface ImageDetectionResult extends BaseDetectionResult {
       image: string;
       score: number;
       children: any[];
+      ifl?: {
+        score: number;
+        heatmap: string;  // URL to heatmap visualization
+      };
+      reverse_image_search_sources?: Array<{ // present when use_reverse_search is enabled
+        url: string;
+        title: string;
+        reason: string;
+        verdict: string;  // e.g. "known_fake"
+        similarity: number;
+      }>;
     };
   };
 }
@@ -94,4 +132,18 @@ interface VideoDetectionResult extends BaseDetectionResult {
 }
 ```
 
+<Accordion title="Legacy Response Fields">
+
+| Field      | Type             | Description                                                                                                    |
+| ---------- | ---------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pipeline` | `string \| null` | Deprecated field that may appear on older image/video detects returned by the API. Ignored for new detections. |
+
+</Accordion>
+
 Use the endpoints below to submit jobs and retrieve detection results for each modality.
+
+## Related Endpoints
+
+- [Create Detection](/detect/create) - Submit a detection job
+- [Get Detection](/detect/get) - Retrieve a single detection result
+- [List Detects](/detect/list) - Retrieve all detection results with pagination

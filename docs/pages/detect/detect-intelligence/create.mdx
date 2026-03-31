@@ -1,0 +1,57 @@
+---
+title: Ask a Question
+slug: /detect/detect-intelligence/create
+---
+
+`POST https://app.resemble.ai/api/v2/detects/{uuid}/intelligence`
+
+Submit a natural-language question about a completed detection report. The API responds immediately with a question UUID while the answer is generated in the background.
+
+## Path Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `uuid` | string | Yes | UUID of the completed detection report. |
+
+## Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `query` | string | Yes | The natural-language question to ask about the detection. |
+
+## Example
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/detects/DETECTION_UUID/intelligence' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{"query": "Summarize the detection results in plain language."}'
+```
+
+## Response (202 Accepted)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "QUESTION_UUID",
+    "detect_uuid": "DETECTION_UUID",
+    "query": "Summarize the detection results in plain language.",
+    "answer": null,
+    "status": "pending",
+    "error_message": null,
+    "created_at": "2024-01-15T10:35:00Z",
+    "updated_at": "2024-01-15T10:35:00Z"
+  }
+}
+```
+
+Use the returned `uuid` to poll the [Get Answer](/detect/detect-intelligence/get) endpoint until the answer is ready.
+
+## Error Responses
+
+| Status | Condition | Example |
+| --- | --- | --- |
+| `400` | Missing query | `{"success": false, "message": "query is required"}` |
+| `404` | Detection not found | `{"success": false, "message": "Detect not found"}` |
+| `422` | Detection not completed | `{"success": false, "message": "Detection must be completed before asking questions"}` |

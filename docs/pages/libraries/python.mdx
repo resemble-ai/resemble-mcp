@@ -370,6 +370,84 @@ substitution_uuid = '...'
 response = Resemble.v2.term_substitutions.delete(substitution_uuid)
 ```
 
+## Deepfake Detection
+
+### Create a Detection
+
+```python
+media_url = "https://example.com/sample-video.mp4"
+
+response = Resemble.v2.deepfake_detection.detect(url=media_url)
+
+if response["success"]:
+    detection_uuid = response["item"]["uuid"]
+    status = response["item"]["status"]
+```
+
+### Get a Detection Result
+
+```python
+import time
+
+detection_uuid = "<detection_uuid>"
+max_attempts = 10
+wait_time_seconds = 3
+
+for _ in range(max_attempts):
+    response = Resemble.v2.deepfake_detection.get(detection_uuid)
+    status = response.get("item", {}).get("status")
+
+    if status in ("completed", "failed"):
+        break
+
+    time.sleep(wait_time_seconds)
+```
+
+### Create and Get a Detection (URL)
+
+```python
+import json
+
+media_url = "https://example.com/sample-audio.wav"
+
+response = Resemble.v2.deepfake_detection.detect_and_get(
+    url=media_url,
+    audio_source_tracing=True,
+    intelligence=True,
+    use_ood_detector=True,
+)
+
+# Full API response
+print(json.dumps(response, indent=2))
+
+# Parsed values
+result = response.get("item", {})
+status = response.get("item", {}).get("status")
+```
+
+### Create and Get a Detection (File Upload)
+
+```python
+import json
+
+file_path = "path/to/local-audio.wav"
+
+with open(file_path, "rb") as file:
+    response = Resemble.v2.deepfake_detection.detect_and_get(
+        file=file,
+        audio_source_tracing=True,
+        intelligence=True,
+        use_ood_detector=True,
+    )
+
+# Full API response
+print(json.dumps(response, indent=2))
+
+# Parsed values
+result = response.get("item", {})
+status = response.get("item", {}).get("status")
+```
+
 ## Additional Resources
 
 - [Creating Clips Guide](/guides/creating-clips/python) - Step-by-step tutorial

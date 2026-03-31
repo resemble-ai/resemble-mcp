@@ -1,0 +1,61 @@
+---
+title: List Audio Source Tracings
+slug: /detect/audio-source-tracing/list
+---
+
+`GET https://app.resemble.ai/api/v2/audio_source_tracings`
+
+Retrieve a paginated list of all source tracing reports for the authenticated user's team.
+
+## Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `page` | integer | ✅ | - | Page number (must be >= 1). |
+| `page_size` | integer | ❌ | 10 | Number of items per page (10-1000). |
+
+## Example Request
+
+```bash
+curl 'https://app.resemble.ai/api/v2/audio_source_tracings?page=1&page_size=10' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "num_pages": 2,
+  "page_size": 10,
+  "total_count": 15,
+  "items": [
+    {
+      "uuid": "8670b3cb8442fb4429a375c21545451a",
+      "results": {
+        "error_message": null,
+        "label": "resemble_ai"
+      },
+      "created_at": "2025-05-13T19:15:32.250Z",
+      "detect_uuid": "8c6e7a99f3faee6e0ec0cb138bdd4a20"
+    }
+  ]
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | string | Unique identifier for the source tracing report. |
+| `results` | object | Source tracing analysis results. |
+| `results.label` | string | Identified source of the audio (e.g., `resemble_ai`, `elevenlabs`) or `real` if audio is not synthetic. |
+| `results.error_message` | string | Error message if tracing failed (null on success). |
+| `created_at` | string | ISO 8601 timestamp of creation. |
+| `detect_uuid` | string | UUID of the associated detect object. Use `GET /api/v2/detect/:uuid` to fetch full details. |
+
+## Notes
+
+- Use the `detect_uuid` field to retrieve the associated detect object for full detection details
+- The default page size is 10, with a maximum of 1000 items per page

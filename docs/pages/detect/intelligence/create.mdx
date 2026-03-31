@@ -1,0 +1,164 @@
+---
+title: Run Intelligence
+slug: /detect/intelligence/create
+---
+
+`POST https://app.resemble.ai/api/v2/intelligence`
+
+Analyzes a media file and returns comprehensive intelligence. The API auto-detects whether the input is audio, video, or image.
+
+By default the request is synchronous. If you provide a `callback_url`, the request becomes asynchronous automatically: the API returns `202 Accepted` with the newly created intelligence record, then sends the final result to your callback URL with an outbound HTTP `POST`.
+
+## Request Body
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `media_token` | string | No* | Token for uploaded media file (from secure upload). |
+| `url` | string | No* | HTTPS URL to media file. |
+| `detect_id` | string | No | UUID of an existing detect to associate. |
+| `media_type` | string | No | Explicit type: `audio`, `image`, or `video` (auto-detected if not provided). |
+| `json` | boolean | No | Return description as JSON. Default: `false` for audio/video, `true` for images. |
+| `callback_url` | string | No | URL that receives the final intelligence payload via HTTP `POST`. When present, the request runs asynchronously and returns `202 Accepted`. |
+
+*One of `media_token` or `url` is required.
+
+## Example
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/intelligence' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/media/sample.wav",
+    "json": true
+  }'
+```
+
+## Asynchronous Example (`callback_url`)
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/intelligence' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/media/sample.wav",
+    "json": true,
+    "callback_url": "https://example.com/webhooks/intelligence"
+  }'
+```
+
+## Response
+
+### Asynchronous Response (`callback_url` provided)
+
+When `callback_url` is present, the API accepts the job immediately and returns a pending intelligence record:
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "abc123...",
+    "media_type": "audio",
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+The final result is then delivered to your callback URL via HTTP `POST`.
+
+### Callback Payload
+
+On success, the callback payload matches the normal intelligence response shape:
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "abc123...",
+    "media_type": "audio",
+    "description": {
+      "speaker_info": "Adult male speaker",
+      "language": "en",
+      "dialect": "en-US",
+      "emotion": "confident",
+      "speaking_style": "conversational",
+      "context": "Product marketing pitch",
+      "message": "Introducing a new feature",
+      "abnormalities": "No anomalies detected",
+      "transcription": "Welcome back to the Resemble product update...",
+      "translation": null,
+      "misinformation": "No misinformation detected"
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+On failure, the callback includes the persisted intelligence record plus an `error` field:
+
+```json
+{
+  "success": false,
+  "item": {
+    "uuid": "abc123...",
+    "media_type": "audio",
+    "description": "Error generating Intelligence report.",
+    "created_at": "2024-01-15T10:30:00Z"
+  },
+  "error": "Gemini API request failed"
+}
+```
+
+### Audio/Video Response (`json=true`)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "abc123...",
+    "media_type": "audio",
+    "description": {
+      "speaker_info": "Adult male speaker",
+      "language": "en",
+      "dialect": "en-US",
+      "emotion": "confident",
+      "speaking_style": "conversational",
+      "context": "Product marketing pitch",
+      "message": "Introducing a new feature",
+      "abnormalities": "No anomalies detected",
+      "transcription": "Welcome back to the Resemble product update...",
+      "translation": null,
+      "misinformation": "No misinformation detected"
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+## Notes
+
+- One of `media_token` or `url` is required.
+- Requests without `callback_url` are processed synchronously and return `200 OK`.
+- Requests with `callback_url` are processed asynchronously and return `202 Accepted`.
+- Use [Get Intelligence](/detect/intelligence/get) to poll for the final result if you do not want to rely on callbacks.
+
+### Image Response (`json=true`, default for images)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "def456...",
+    "media_type": "image",
+    "description": {
+      "scene_description": "Detailed description of what the image depicts",
+      "subjects": "People, objects, locations identified in the image",
+      "authenticity_analysis": "Visual artifacts, manipulation indicators, AI generation signs",
+      "context_and_setting": "Environmental, temporal, situational context",
+      "abnormalities": "Visual anomalies indicating AI generation or manipulation",
+      "misinformation": "Misinformation and disinformation analysis results"
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}
+```

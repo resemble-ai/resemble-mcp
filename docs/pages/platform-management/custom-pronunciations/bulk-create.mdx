@@ -1,0 +1,49 @@
+---
+title: Bulk Create from ZIP
+slug: /platform-management/custom-pronunciations/bulk-create
+---
+
+`POST https://app.resemble.ai/api/v2/pronunciations/bulk`
+
+Upload multiple pronunciations at once. Each audio file in the ZIP becomes a pronunciation — the filename (without extension) is used as the word.
+
+### Request Body (multipart/form-data)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `zip` | file | Yes | ZIP file containing audio files. Max 50 files, max 100MB total. |
+
+```bash
+# ZIP structure:
+#   mounjaro.wav      -> word: "mounjaro"
+#   abemaciclib.wav   -> word: "abemaciclib"
+#   paracetamol.flac  -> word: "paracetamol"
+
+curl -X POST https://app.resemble.ai/api/v2/pronunciations/bulk \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "zip=@pronunciations.zip"
+```
+
+### Response (201 Created)
+
+```json
+{
+  "success": true,
+  "total_created": 3,
+  "total_errors": 0,
+  "items": [
+    {
+      "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "word": "mounjaro",
+      "status": "pending",
+      "active": true,
+      "audio_url": "https://...",
+      "created_at": "2026-03-12T00:00:00.000Z",
+      "updated_at": "2026-03-12T00:00:00.000Z"
+    }
+  ],
+  "errors": []
+}
+```
+
+Each successfully created pronunciation starts with `status: "pending"`. Any files that fail validation are reported in the `errors` array with a reason.

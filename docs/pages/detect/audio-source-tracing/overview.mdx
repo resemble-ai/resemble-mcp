@@ -1,0 +1,46 @@
+---
+title: Audio Source Tracing
+slug: /detect/audio-source-tracing
+---
+
+Audio Source Tracing identifies the origin of synthetic audio by analyzing audio patterns and comparing them against known AI voice generation platforms.
+
+## Overview
+
+When audio is detected as synthetic (labeled `fake`), source tracing can identify which AI platform was likely used to generate it. The system returns a label identifying the likely source (e.g., `resemble_ai`, `elevenlabs`) or `real` if the audio is determined to not be synthetic.
+
+## Response Schema
+
+```ts
+interface AudioSourceTracingResult {
+  uuid: string;
+  results: {
+    label: string;
+    error_message: string | null;
+  };
+  created_at: string;
+  detect_uuid: string;
+}
+```
+
+## Response Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | string | Unique identifier for the source tracing report. |
+| `results.label` | string | Identified source of the audio (e.g., `resemble_ai`, `elevenlabs`) or `real` if audio is not synthetic. |
+| `results.error_message` | string | Error message if tracing failed (null on success). |
+| `created_at` | string | ISO 8601 timestamp of creation. |
+| `detect_uuid` | string | UUID of the associated detect object. |
+
+## Source Tracing Visibility
+
+- **In detect objects:** `audio_source_tracing` results are only returned when the audio detection result is labeled as `fake`
+- **Standalone endpoints:** When accessing the `/audio_source_tracings` endpoints directly, results are always returned regardless of the detection label
+
+## Related Endpoints
+
+Use these endpoints to retrieve source tracing reports:
+
+- [List Audio Source Tracings](/detect/audio-source-tracing/list) - Get all source tracing reports
+- [Get Audio Source Tracing](/detect/audio-source-tracing/get) - Get a single report by UUID

@@ -5,35 +5,68 @@ slug: /audio-tools/audio-enhancement/list
 
 `GET https://app.resemble.ai/api/v2/audio_enhancements`
 
-Retrieve a paginated list of audio enhancements for your team.
+Returns a paginated list of all audio enhancements for your team, ordered by most recent first.
+
+## Query Parameters
 
 | Parameter | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `page` | integer | ❌ | Page number. |
-| `page_size` | integer | ❌ | Items per page. |
+| `page` | integer | ✅ | Page number (starting from 1). |
+| `page_size` | integer | ❌ | Items per page (10 to 1000). Default: `10`. |
 
 ```bash
-curl 'https://app.resemble.ai/api/v2/audio_enhancements?page=1&page_size=10' \
+curl 'https://app.resemble.ai/api/v2/audio_enhancements?page=1&page_size=20' \
   -H 'Authorization: Bearer YOUR_API_TOKEN'
 ```
+
+### Success Response
+
+**Status: `200 OK`**
 
 ```json
 {
   "success": true,
   "page": 1,
-  "total_results": 10,
-  "page_count": 1,
+  "num_pages": 5,
+  "page_size": 10,
+  "total_count": 47,
   "items": [
     {
       "uuid": "ENHANCEMENT_UUID",
       "status": "completed",
-      "error_message": null,
-      "loudness_target_level": -14,
-      "loudness_peak_limit": -1,
-      "enhancement_level": 1.0,
+      "enhancement_engine": "v2",
+      "remove_noise": true,
+      "normalize": true,
+      "studio_sound": true,
       "original_audio_url": "https://...",
       "enhanced_audio_url": "https://..."
     }
   ]
 }
 ```
+
+### Item Fields
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | string | Enhancement identifier. |
+| `status` | string | `pending`, `processing`, `completed`, or `failed`. |
+| `enhancement_engine` | string | `"v1"` or `"v2"`. |
+| `error_message` | string | Only present on failed enhancements. |
+| `remove_noise` | boolean | Engine v2 only. |
+| `normalize` | boolean | Engine v2 only. |
+| `studio_sound` | boolean | Engine v2 only. |
+| `loudness_target_level` | integer | Engine v1 only. |
+| `loudness_peak_limit` | integer | Engine v1 only. |
+| `enhancement_level` | float | Engine v1 only. |
+| `original_audio_url` | string | URL to the uploaded original file. |
+| `enhanced_audio_url` | string | URL to the enhanced file. Only present when completed. |
+
+Null fields are omitted from the response.
+
+### Error Responses
+
+| Status | Condition | Example |
+| --- | --- | --- |
+| `400` | Invalid page (< 1) | `{"success": false, "message": "page must be >= 1"}` |
+| `400` | Invalid page_size | `{"success": false, "message": "page_size must be between 10 and 1000"}` |

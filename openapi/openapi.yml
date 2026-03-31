@@ -49,12 +49,16 @@ tags:
     description: Manage knowledge items and RAG support for agents
   - name: Deepfake Detection
     description: Deepfake detection
+  - name: Audio Source Tracing
+    description: Identify the origin of synthetic audio
   - name: Intelligence
     description: Analyze audio, image, and video for insights
+  - name: Detect Intelligence
+    description: Ask natural-language questions about completed detection reports
   - name: Identity
     description: Identity management for speaker verification
   - name: Watermark
-    description: Apply and detect audio watermarks
+    description: Apply and detect watermarks on audio, image, and video files
   - name: Voices
     description: Manage and create voices
   - name: Voice Design
@@ -67,6 +71,8 @@ tags:
     description: Manage generated audio clips
   - name: Term Substitutions
     description: Manage pronunciation substitutions
+  - name: Custom Pronunciations
+    description: Manage custom word pronunciations with reference audio
   - name: Voice Settings Presets
     description: Manage voice configuration presets
   - name: Account
@@ -83,6 +89,37 @@ components:
       description: API token from https://app.resemble.ai/account/api
 
   schemas:
+    CustomPronunciation:
+      type: object
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          description: Unique identifier for the pronunciation
+        word:
+          type: string
+          description: The word or phrase this pronunciation applies to
+          example: "mounjaro"
+        status:
+          type: string
+          enum: [pending, ready, failed]
+          description: Processing status. Only "ready" pronunciations are applied during synthesis.
+          example: "ready"
+        active:
+          type: boolean
+          description: Whether this pronunciation is active and will be applied during synthesis
+          example: true
+        audio_url:
+          type: string
+          format: uri
+          description: URL to the uploaded reference audio
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
     Error:
       type: object
       properties:
@@ -129,6 +166,196 @@ components:
               type: number
           description: Phoneme timestamps [start, end] in seconds
 
+    DetectAudioMetrics:
+      type: object
+      nullable: true
+      description: Audio detection metrics (for audio and video media types)
+      required:
+        - label
+        - score
+        - consistency
+        - aggregated_score
+      properties:
+        label:
+          type: string
+          description: Detection label (fake or real)
+          example: "fake"
+        score:
+          type: array
+          items:
+            type: string
+          description: Array of prediction scores per chunk
+          example: ["0.9", "0.8", "0.7"]
+        consistency:
+          type: string
+          description: Consistency metric across chunks
+          example: "0.85"
+        aggregated_score:
+          type: string
+          description: Overall aggregated detection score
+          example: "0.566"
+        image:
+          type: string
+          description: URL to visualization heatmap image (if visualize=true)
+          example: "https://storage.example.com/heatmap.png"
+
+    DetectImageMetrics:
+      type: object
+      nullable: true
+      description: Image detection metrics (for image media type)
+      required:
+        - type
+        - label
+        - image
+        - score
+        - children
+      properties:
+        type:
+          type: string
+          description: Type of image analysis performed
+          example: "facial"
+        label:
+          type: string
+          description: Detection label (fake or real)
+          example: "fake"
+        image:
+          type: string
+          description: URL to visualization image
+          example: "https://storage.example.com/image.png"
+        score:
+          type: number
+          format: float
+          description: Detection confidence score
+          example: 0.9
+        children:
+          type: array
+          items:
+            type: object
+          description: Nested analysis results (structure varies by pipeline)
+
+    DetectVideoMetrics:
+      type: object
+      nullable: true
+      description: Video detection metrics (for video media type)
+      required:
+        - label
+        - score
+        - certainty
+        - children
+      properties:
+        label:
+          type: string
+          description: Overall video detection label
+          example: "Fake"
+        score:
+          type: number
+          format: float
+          description: Overall detection score
+          example: 0.9
+        certainty:
+          type: number
+          format: float
+          description: Overall certainty score
+          example: 0.9
+        treeview:
+          type: string
+          description: Optional tree visualization data
+        children:
+          type: array
+          description: Hierarchical detection results across frames
+          items:
+            type: object
+            required:
+              - type
+              - conclusion
+              - score
+              - certainty
+              - "certainty (%)"
+              - children
+            properties:
+              type:
+                type: string
+                example: "VideoResult"
+              conclusion:
+                type: string
+                example: "Fake"
+              score:
+                type: number
+                format: float
+                example: 0.99
+              certainty:
+                type: number
+                format: float
+                example: 0.9
+              "certainty (%)":
+                type: string
+                example: "90%"
+              children:
+                type: array
+                description: Frame-level detection results
+                items:
+                  type: object
+                  required:
+                    - type
+                    - conclusion
+                    - score
+                    - certainty
+                    - "certainty (%)"
+                    - timestamp
+                    - children
+                  properties:
+                    type:
+                      type: string
+                      example: "ImageResult"
+                    conclusion:
+                      type: string
+                      example: "Fake"
+                    score:
+                      type: number
+                      format: float
+                      example: 0.9
+                    certainty:
+                      type: number
+                      format: float
+                      example: 0.95
+                    "certainty (%)":
+                      type: string
+                      example: "95%"
+                    timestamp:
+                      type: number
+                      format: float
+                      description: Timestamp in seconds
+                      example: 0.23
+                    children:
+                      type: array
+                      description: Segment-level detection results
+                      items:
+                        type: object
+                        required:
+                          - type
+                          - conclusion
+                          - score
+                          - certainty
+                          - "certainty (%)"
+                        properties:
+                          type:
+                            type: string
+                            example: "Segment"
+                          conclusion:
+                            type: string
+                            example: "Fake"
+                          score:
+                            type: number
+                            format: float
+                            example: 0.9
+                          certainty:
+                            type: number
+                            format: float
+                            example: 0.995
+                          "certainty (%)":
+                            type: string
+                            example: "99.5%"
+
 paths:
   /synthesize:
     post:
@@ -164,6 +391,10 @@ paths:
                   type: string
                   description: Text or SSML to synthesize (max 3,000 characters)
                   example: "Hello from Resemble!"
+                model:
+                  type: string
+                  description: Model to use for synthesis. Pass `chatterbox-turbo` to use the Turbo model for lower latency and paralinguistic tag support. If not specified, defaults to Chatterbox or Chatterbox Multilingual based on the voice. Note - Chatterbox-Turbo is supported by all Rapid English voices and Pre Built Library voices.
+                  example: "chatterbox-turbo"
                 precision:
                   type: string
                   enum: [MULAW, PCM_16, PCM_24, PCM_32]
@@ -179,6 +410,14 @@ paths:
                   enum: [8000, 16000, 22050, 32000, 44100, 48000]
                   default: 22050
                   description: Audio sample rate in Hz
+                use_hd:
+                  type: boolean
+                  default: false
+                  description: Enable HD synthesis with small latency trade-off
+                apply_custom_pronunciations:
+                  type: boolean
+                  default: false
+                  description: When true, automatically applies your team's custom pronunciations to matching words in the input text. Defaults to false.
       responses:
         '200':
           description: Successful synthesis
@@ -723,7 +962,9 @@ paths:
       tags:
         - Audio Enhancement
       summary: Create audio enhancement
-      description: Enhance audio quality
+      description: |
+        Submit an audio file for enhancement. Processing happens asynchronously in the background.
+        The API defaults to the v2 enhancement engine. The v1 engine is legacy and will be sunset in a future release.
       operationId: createAudioEnhancement
       requestBody:
         required: true
@@ -737,27 +978,45 @@ paths:
                 audio_file:
                   type: string
                   format: binary
-                  description: MP3 or WAV file (max 150 MB)
+                  description: Audio file to enhance (WAV, MP3, M4A, MP4, OGG, AAC, FLAC). Max 150 MB.
+                enhancement_engine:
+                  type: string
+                  enum: [v1, v2]
+                  default: v2
+                  description: Enhancement engine to use. Default is v2.
+                remove_noise:
+                  type: boolean
+                  default: true
+                  description: Remove background noise. Engine v2 only.
+                normalize:
+                  type: boolean
+                  default: true
+                  description: Normalize audio levels. Engine v2 only.
+                studio_sound:
+                  type: boolean
+                  default: true
+                  description: Apply studio-quality enhancement. Engine v2 only.
                 enhancement_level:
                   type: number
                   format: float
                   minimum: 0.0
                   maximum: 1.0
                   default: 1.0
+                  description: Enhancement intensity (0.0 to 1.0). Engine v1 only (legacy).
                 loudness_target_level:
                   type: integer
                   minimum: -70
                   maximum: -5
                   default: -14
-                  description: LUFS
+                  description: Target loudness in LUFS. Engine v1 only (legacy).
                 loudness_peak_limit:
                   type: integer
                   minimum: -9
                   maximum: 0
                   default: -1
-                  description: dBTP
+                  description: Peak limit in dBTP. Engine v1 only (legacy).
       responses:
-        '200':
+        '202':
           description: Enhancement job created
           content:
             application/json:
@@ -770,12 +1029,39 @@ paths:
                     type: string
                   status:
                     type: string
-    
+                    enum: [pending]
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "audio_file parameter is required"
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Your plan doesn't support audio enhancements."
+
     get:
       tags:
         - Audio Enhancement
       summary: List audio enhancements
-      description: Retrieve paginated list of audio enhancements
+      description: Returns a paginated list of all audio enhancements for your team, ordered by most recent first.
       operationId: listAudioEnhancements
       parameters:
         - name: page
@@ -784,11 +1070,15 @@ paths:
           schema:
             type: integer
             minimum: 1
-            default: 1
+          description: Page number (starting from 1).
         - name: page_size
           in: query
           schema:
             type: integer
+            minimum: 10
+            maximum: 1000
+            default: 10
+          description: Items per page (10 to 1000). Default 10.
       responses:
         '200':
           description: List of enhancements
@@ -805,17 +1095,69 @@ paths:
                     type: integer
                   page_size:
                     type: integer
+                  total_count:
+                    type: integer
                   items:
                     type: array
                     items:
                       type: object
+                      properties:
+                        uuid:
+                          type: string
+                        status:
+                          type: string
+                          enum: [pending, processing, completed, failed]
+                        enhancement_engine:
+                          type: string
+                          enum: [v1, v2]
+                        error_message:
+                          type: string
+                          nullable: true
+                        remove_noise:
+                          type: boolean
+                          description: Engine v2 only.
+                        normalize:
+                          type: boolean
+                          description: Engine v2 only.
+                        studio_sound:
+                          type: boolean
+                          description: Engine v2 only.
+                        loudness_target_level:
+                          type: integer
+                          description: Engine v1 only.
+                        loudness_peak_limit:
+                          type: integer
+                          description: Engine v1 only.
+                        enhancement_level:
+                          type: number
+                          format: float
+                          description: Engine v1 only.
+                        original_audio_url:
+                          type: string
+                          format: uri
+                        enhanced_audio_url:
+                          type: string
+                          format: uri
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "page must be >= 1"
 
   /audio_enhancements/{enhancement_uuid}:
     get:
       tags:
         - Audio Enhancement
       summary: Get audio enhancement
-      description: Get status and result of an audio enhancement
+      description: Poll this endpoint to check the status of an enhancement job and retrieve the download URL when complete.
       operationId: getAudioEnhancement
       parameters:
         - name: enhancement_uuid
@@ -823,6 +1165,7 @@ paths:
           required: true
           schema:
             type: string
+          description: The UUID returned from the create endpoint.
       responses:
         '200':
           description: Enhancement details
@@ -837,13 +1180,29 @@ paths:
                     type: string
                   status:
                     type: string
-                    enum: [processing, completed, failed]
+                    enum: [pending, processing, completed, failed]
                   enhanced_audio_url:
                     type: string
                     format: uri
+                    nullable: true
+                    description: Download URL. Only present when status is completed. This is a temporary signed URL.
                   error_message:
                     type: string
                     nullable: true
+                    description: Human-readable error. Only present when status is failed.
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: "Audio enhancement not found or not accessible"
 
   /agents:
     get:
@@ -2222,6 +2581,129 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   /detect:
+    get:
+      tags:
+        - Deepfake Detection
+      summary: List all detects
+      description: Retrieve a paginated list of all detect objects for the authenticated user's team
+      operationId: listDetections
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Page number (must be >= 1)
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 1000
+            default: 10
+          description: Number of items per page (10-1000)
+      responses:
+        '200':
+          description: List of detects
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  total_count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        media_type:
+                          type: string
+                          enum: [audio, video, image]
+                        status:
+                          type: string
+                          enum: [processing, completed, failed]
+                        metrics:
+                          $ref: '#/components/schemas/DetectAudioMetrics'
+                        image_metrics:
+                          $ref: '#/components/schemas/DetectImageMetrics'
+                        video_metrics:
+                          $ref: '#/components/schemas/DetectVideoMetrics'
+                        audio_source_tracing:
+                          type: object
+                          nullable: true
+                          description: Source tracing results (only returned if audio is labeled fake)
+                          properties:
+                            label:
+                              type: string
+                              description: Identified source (e.g., resemble_ai, elevenlabs) or "real" if audio is not synthetic
+                            error_message:
+                              type: string
+                              nullable: true
+                        intelligence:
+                          type: object
+                          nullable: true
+                        url:
+                          type: string
+                          nullable: true
+                          description: URL to the media file. Null when Zero Retention Mode is enabled.
+                        audio_url:
+                          type: string
+                          nullable: true
+                          description: Alias of url. Null when Zero Retention Mode is enabled.
+                        filename:
+                          type: string
+                          description: Original filename, or tokenized (redacted_<token>.<ext>) when Zero Retention Mode is enabled
+                        duration:
+                          type: number
+                        zero_retention_mode:
+                          type: boolean
+                          description: Whether Zero Retention Mode was enabled for this detect
+                        media_redacted:
+                          type: boolean
+                          description: True when Zero Retention Mode is active and media URLs are redacted
+                        media_deleted:
+                          type: boolean
+                          description: True when the source file has been permanently deleted from storage
+                        file_deleted_at:
+                          type: string
+                          format: date-time
+                          nullable: true
+                          description: ISO 8601 timestamp of when the file was purged, or null if not yet deleted
+                        visualize:
+                          type: boolean
+                        audio_source_tracing_enabled:
+                          type: boolean
+                        use_ood_detector:
+                          type: boolean
+                        pipeline:
+                          type: string
+                          nullable: true
+                          deprecated: true
+                          description: Legacy field. May be present on older image/video detects. Ignored on create for new detections.
+                        extra_params:
+                          type: object
+                        error_message:
+                          type: string
+                          nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                        updated_at:
+                          type: string
+                          format: date-time
+
     post:
       tags:
         - Deepfake Detection
@@ -2241,6 +2723,55 @@ paths:
                   type: string
                   format: uri
                   description: HTTPS URL to audio, image, or video file
+                callback_url:
+                  type: string
+                  format: uri
+                  description: POST destination when analysis completes
+                visualize:
+                  type: boolean
+                  description: Generate visualization artifacts
+                frame_length:
+                  type: integer
+                  minimum: 1
+                  maximum: 4
+                  default: 2
+                  description: Window size in seconds (audio/video)
+                start_region:
+                  type: number
+                  description: Start of segment to analyze (seconds)
+                end_region:
+                  type: number
+                  description: End of segment to analyze (seconds)
+                max_video_fps:
+                  type: number
+                  description: Downsample high-frame-rate media
+                max_video_secs:
+                  type: number
+                  description: Cap processed duration
+                model_types:
+                  type: string
+                  enum: [image, talking_head]
+                  description: Use talking_head for face-swaps
+                intelligence:
+                  type: boolean
+                  default: false
+                  description: Run multimodal intelligence analysis on the media
+                audio_source_tracing:
+                  type: boolean
+                  default: false
+                  description: Enable audio source tracing to identify synthetic audio origin
+                use_reverse_search:
+                  type: boolean
+                  default: false
+                  description: Enable reverse image search to improve detection accuracy for image files. Searches the web for matching images and uses AI to classify whether the match indicates a known fake. Only applies to image detections.
+                use_ood_detector:
+                  type: boolean
+                  default: false
+                  description: Enable out-of-distribution detection
+                zero_retention_mode:
+                  type: boolean
+                  default: false
+                  description: Enable Zero Retention Mode to automatically delete submitted media after detection completes. When enabled, media URLs are redacted and the filename is tokenized.
       responses:
         '200':
           description: Detection job created
@@ -2258,13 +2789,50 @@ paths:
                         type: string
                       status:
                         type: string
+                      zero_retention_mode:
+                        type: boolean
+                        description: Whether Zero Retention Mode is enabled for this detect
+                      media_redacted:
+                        type: boolean
+                        description: True when Zero Retention Mode is active and media URLs are redacted
+                      media_deleted:
+                        type: boolean
+                        description: True when the source file has been permanently deleted from storage
+                      file_deleted_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: ISO 8601 timestamp of when the file was purged, or null if not yet deleted
+                      url:
+                        type: string
+                        nullable: true
+                        description: URL to the media file. Null when Zero Retention Mode is enabled.
+                      audio_url:
+                        type: string
+                        nullable: true
+                        description: Alias of url. Null when Zero Retention Mode is enabled.
+                      filename:
+                        type: string
+                        description: Original filename, or tokenized (redacted_<token>.<ext>) when Zero Retention Modeon Modeon Mode is enabled
+                      intelligence:
+                        type: object
+                        nullable: true
+                        description: Intelligence results when requested
+                        properties:
+                          description:
+                            oneOf:
+                              - type: string
+                              - type: object
+                          created_at:
+                            type: string
+                            format: date-time
 
   /detect/{uuid}:
     get:
       tags:
         - Deepfake Detection
       summary: Get deepfake detection result
-      description: Get deepfake detection result
+      description: Get deepfake detection result by UUID
       operationId: getDetection
       parameters:
         - name: uuid
@@ -2272,6 +2840,7 @@ paths:
           required: true
           schema:
             type: string
+          description: The UUID of the detect object
       responses:
         '200':
           description: Detection result
@@ -2284,13 +2853,97 @@ paths:
                     type: boolean
                   item:
                     type: object
+                    properties:
+                      uuid:
+                        type: string
+                      media_type:
+                        type: string
+                        enum: [audio, video, image]
+                      status:
+                        type: string
+                        enum: [processing, completed, failed]
+                      metrics:
+                        $ref: '#/components/schemas/DetectAudioMetrics'
+                      image_metrics:
+                        $ref: '#/components/schemas/DetectImageMetrics'
+                      video_metrics:
+                        $ref: '#/components/schemas/DetectVideoMetrics'
+                      audio_source_tracing:
+                        type: object
+                        nullable: true
+                        description: Source tracing results (only returned if audio is labeled fake)
+                        properties:
+                          label:
+                            type: string
+                            description: Identified source (e.g., resemble_ai, elevenlabs) or "real" if audio is not synthetic
+                          error_message:
+                            type: string
+                            nullable: true
+                      intelligence:
+                        type: object
+                        nullable: true
+                        description: Intelligence results when requested
+                        properties:
+                          uuid:
+                            type: string
+                          description:
+                            oneOf:
+                              - type: string
+                              - type: object
+                          created_at:
+                            type: string
+                            format: date-time
+                      url:
+                        type: string
+                        nullable: true
+                        description: URL to the media file. Null when Zero Retention Modeon Modeon Modeon Modeon Modeon Modeon Mode is enabled.
+                      audio_url:
+                        type: string
+                        nullable: true
+                        description: Alias of url. Null when Zero Retention Mode is enabled.
+                      filename:
+                        type: string
+                        description: Original filename, or tokenized (redacted_<token>.<ext>) when Zero Retention Mode is enabled
+                      duration:
+                        type: number
+                      zero_retention_mode:
+                        type: boolean
+                        description: Whether Zero Retention Mode is enabled for this detect
+                      media_redacted:
+                        type: boolean
+                        description: True when Zero Retention Mode is active and media URLs are redacted
+                      media_deleted:
+                        type: boolean
+                        description: True when the source file has been permanently deleted from storage
+                      file_deleted_at:
+                        type: string
+                        format: date-time
+                        nullable: true
+                        description: ISO 8601 timestamp of when the file was purged, or null if not yet deleted
+                      pipeline:
+                        type: string
+                        nullable: true
+                        deprecated: true
+                        description: Legacy field. May be present on older image/video detects. Ignored for new detections.
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Detect not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
-  /audio_intelligence:
+  /intelligence:
     post:
       tags:
         - Intelligence
       summary: Run intelligence
-      description: Analyze audio, image, or video for comprehensive insights
+      description: Analyze audio, image, or video for comprehensive insights. Optionally reference an existing detect to associate.
       operationId: runIntelligence
       requestBody:
         required: true
@@ -2298,16 +2951,29 @@ paths:
           application/json:
             schema:
               type: object
-              required:
-                - url
               properties:
+                media_token:
+                  type: string
+                  description: Token for uploaded media file (from secure upload)
                 url:
                   type: string
                   format: uri
+                  description: HTTPS URL to audio, image, or video file
+                detect_id:
+                  type: string
+                  format: uuid
+                  description: UUID of an existing detect to associate
+                media_type:
+                  type: string
+                  enum: [audio, video, image]
+                  description: Explicit media type (auto-detected if not provided)
                 json:
                   type: boolean
-                  default: false
-                  description: Return structured fields instead of prose
+                  description: Return structured fields instead of prose. Default false for audio/video, true for images.
+                callback_url:
+                  type: string
+                  format: uri
+                  description: URL that receives the final intelligence payload via HTTP POST. When present, the request runs asynchronously and returns 202 Accepted.
       responses:
         '200':
           description: Intelligence analysis
@@ -2321,6 +2987,8 @@ paths:
                   item:
                     type: object
                     properties:
+                      uuid:
+                        type: string
                       description:
                         oneOf:
                           - type: string
@@ -2328,6 +2996,415 @@ paths:
                       created_at:
                         type: string
                         format: date-time
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detect object
+                      media_type:
+                        type: string
+                        enum: [audio, video, image]
+                        description: Type of media analyzed
+        '202':
+          description: Intelligence accepted for asynchronous processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      created_at:
+                        type: string
+                        format: date-time
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detect object
+                      media_type:
+                        type: string
+                        enum: [audio, video, image]
+                        description: Type of media analyzed
+
+  /intelligences:
+    get:
+      tags:
+        - Intelligence
+      summary: List intelligences
+      description: Retrieve a paginated list of all intelligence reports for the authenticated user's team
+      operationId: listIntelligences
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Page number (must be >= 1)
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 1000
+            default: 10
+          description: Number of items per page (10-1000)
+      responses:
+        '200':
+          description: List of intelligence reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  total_count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        description:
+                          type: string
+                          description: The AI-generated intelligence analysis
+                        created_at:
+                          type: string
+                          format: date-time
+                        detect_uuid:
+                          type: string
+                          description: UUID of the associated detect object
+                        media_type:
+                          type: string
+                          enum: [audio, video, image]
+                          description: Type of media analyzed
+
+  /intelligences/{uuid}:
+    get:
+      tags:
+        - Intelligence
+      summary: Get intelligence
+      description: Retrieve a single intelligence report by its UUID
+      operationId: getIntelligence
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the intelligence report
+      responses:
+        '200':
+          description: Intelligence report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      description:
+                        type: string
+                        description: The AI-generated intelligence analysis
+                      created_at:
+                        type: string
+                        format: date-time
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detect object
+                      media_type:
+                        type: string
+                        enum: [audio, video, image]
+                        description: Type of media analyzed
+        '404':
+          description: Intelligence not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /detects/{uuid}/intelligence:
+    post:
+      tags:
+        - Detect Intelligence
+      summary: Ask a question about a detection
+      description: Submit a natural-language question about a completed detection report. Returns 202 Accepted while the answer is generated in the background.
+      operationId: askDetectIntelligenceQuestion
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID of the completed detection report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: The natural-language question to ask about the detection
+      responses:
+        '202':
+          description: Question accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        description: UUID of the question
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detection report
+                      query:
+                        type: string
+                        description: The submitted question
+                      answer:
+                        type: string
+                        nullable: true
+                        description: The generated answer (null until completed)
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                        description: Current status of the question
+                      error_message:
+                        type: string
+                        nullable: true
+                        description: Error details when status is failed
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '400':
+          description: Bad request (missing query)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Detection not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Detection not completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /detects/{uuid}/intelligence/{question_uuid}:
+    get:
+      tags:
+        - Detect Intelligence
+      summary: Get answer to a detection question
+      description: Retrieve the status and answer for a previously submitted question. Poll until status is completed or failed.
+      operationId: getDetectIntelligenceQuestion
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID of the detection report
+        - name: question_uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: UUID of the question
+      responses:
+        '200':
+          description: Question status and answer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                        description: UUID of the question
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detection report
+                      query:
+                        type: string
+                        description: The submitted question
+                      answer:
+                        type: string
+                        nullable: true
+                        description: The generated answer (null until completed)
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                        description: Current status of the question
+                      error_message:
+                        type: string
+                        nullable: true
+                        description: Error details when status is failed
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '404':
+          description: Question not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /audio_source_tracings:
+    get:
+      tags:
+        - Audio Source Tracing
+      summary: List audio source tracings
+      description: Retrieve a paginated list of all source tracing reports for the authenticated user's team
+      operationId: listAudioSourceTracings
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: Page number (must be >= 1)
+        - name: page_size
+          in: query
+          schema:
+            type: integer
+            minimum: 10
+            maximum: 1000
+            default: 10
+          description: Number of items per page (10-1000)
+      responses:
+        '200':
+          description: List of source tracing reports
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  page:
+                    type: integer
+                  num_pages:
+                    type: integer
+                  page_size:
+                    type: integer
+                  total_count:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        uuid:
+                          type: string
+                        results:
+                          type: object
+                          properties:
+                            label:
+                              type: string
+                              description: Identified source (e.g., resemble_ai, elevenlabs) or "real" if audio is not synthetic
+                            error_message:
+                              type: string
+                              nullable: true
+                        created_at:
+                          type: string
+                          format: date-time
+                        detect_uuid:
+                          type: string
+                          description: UUID of the associated detect object
+
+  /audio_source_tracings/{uuid}:
+    get:
+      tags:
+        - Audio Source Tracing
+      summary: Get audio source tracing
+      description: Retrieve a single source tracing report by its UUID
+      operationId: getAudioSourceTracing
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The UUID of the source tracing report
+      responses:
+        '200':
+          description: Source tracing report
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    type: object
+                    properties:
+                      uuid:
+                        type: string
+                      results:
+                        type: object
+                        properties:
+                          label:
+                            type: string
+                            description: Identified source (e.g., resemble_ai, elevenlabs) or "real" if audio is not synthetic
+                          error_message:
+                            type: string
+                            nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      detect_uuid:
+                        type: string
+                        description: UUID of the associated detect object
+        '404':
+          description: Source tracing report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /identity:
     post:
@@ -2423,8 +3500,17 @@ paths:
       tags:
         - Watermark
       summary: Apply watermark
-      description: Apply audio watermark to a file
+      description: "Apply a watermark to an audio, image, or video file. The media type is automatically detected from the file content. Use the `Prefer: wait` header for synchronous processing."
       operationId: applyWatermark
+      parameters:
+        - name: Prefer
+          in: header
+          required: false
+          schema:
+            type: string
+            enum:
+              - wait
+          description: When set to "wait", the API processes synchronously and returns the completed result.
       requestBody:
         required: true
         content:
@@ -2437,6 +3523,17 @@ paths:
                 url:
                   type: string
                   format: uri
+                  description: HTTPS URL to the media file (audio, image, or video).
+                strength:
+                  type: number
+                  minimum: 0.0
+                  maximum: 1.0
+                  default: 0.2
+                  description: Watermark strength for image/video. Ignored for audio.
+                custom_message:
+                  type: string
+                  default: resembleai
+                  description: Custom message to embed for image/video. Ignored for audio.
       responses:
         '200':
           description: Watermark job created
@@ -2449,13 +3546,41 @@ paths:
                     type: boolean
                   item:
                     type: object
+                    properties:
+                      uuid:
+                        type: string
+                      media_type:
+                        type: string
+                        enum:
+                          - audio
+                          - image
+                          - video
+                        description: Detected media type of the source file.
+                      source_media_url:
+                        type: string
+                        format: uri
+                        description: The original source URL provided in the request.
+                      watermarked_media:
+                        type: string
+                        format: uri
+                        nullable: true
+                        description: Signed URL to the watermarked file. Populated when processing is complete.
+                      metrics:
+                        type: object
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
 
   /watermark/apply/{uuid}/result:
     get:
       tags:
         - Watermark
       summary: Get watermark apply result
-      description: Retrieve the result of a watermark apply job
+      description: Retrieve the result of a watermark apply job.
       operationId: getWatermarkApplyResult
       parameters:
         - name: uuid
@@ -2478,24 +3603,46 @@ paths:
                     properties:
                       uuid:
                         type: string
+                      media_type:
+                        type: string
+                        enum:
+                          - audio
+                          - image
+                          - video
+                      source_media_url:
+                        type: string
+                        format: uri
+                      watermarked_media:
+                        type: string
+                        format: uri
+                        nullable: true
+                        description: Signed URL to the watermarked file. Null while processing.
+                      metrics:
+                        type: object
+                        nullable: true
                       created_at:
                         type: string
                         format: date-time
                       updated_at:
                         type: string
                         format: date-time
-                      watermarked_audio:
-                        type: string
-                        format: uri
-                        description: Signed URL to the watermarked audio file
 
   /watermark/detect:
     post:
       tags:
         - Watermark
       summary: Detect watermark
-      description: Detect watermark in an audio file
+      description: "Detect a watermark in an audio, image, or video file. The media type is automatically detected from the file content. Use the `Prefer: wait` header for synchronous processing."
       operationId: detectWatermark
+      parameters:
+        - name: Prefer
+          in: header
+          required: false
+          schema:
+            type: string
+            enum:
+              - wait
+          description: When set to "wait", the API processes synchronously and returns the completed result with metrics.
       requestBody:
         required: true
         content:
@@ -2508,6 +3655,11 @@ paths:
                 url:
                   type: string
                   format: uri
+                  description: HTTPS URL to the media file (audio, image, or video).
+                custom_message:
+                  type: string
+                  default: resembleai
+                  description: Custom message used during encoding for image/video. Ignored for audio.
       responses:
         '200':
           description: Detection job created
@@ -2523,7 +3675,26 @@ paths:
                     properties:
                       uuid:
                         type: string
+                      media_type:
+                        type: string
+                        enum:
+                          - audio
+                          - image
+                          - video
+                      source_media_url:
+                        type: string
+                        format: uri
+                      metrics:
+                        type: object
+                        nullable: true
+                        description: Detection results. Null while processing.
+                      watermarked_media:
+                        type: string
+                        nullable: true
                       created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
                         type: string
                         format: date-time
 
@@ -2532,7 +3703,7 @@ paths:
       tags:
         - Watermark
       summary: Get watermark detection result
-      description: Retrieve the result of a watermark detection
+      description: Retrieve the result of a watermark detection.
       operationId: getWatermarkDetectionResult
       parameters:
         - name: uuid
@@ -2555,10 +3726,34 @@ paths:
                     properties:
                       uuid:
                         type: string
+                      media_type:
+                        type: string
+                        enum:
+                          - audio
+                          - image
+                          - video
+                      source_media_url:
+                        type: string
+                        format: uri
                       metrics:
                         type: object
-                        additionalProperties:
-                          type: boolean
+                        nullable: true
+                        description: Detection results including has_watermark. Audio also includes confidence.
+                        properties:
+                          has_watermark:
+                            type: boolean
+                          confidence:
+                            type: number
+                            description: Confidence score (audio only).
+                      watermarked_media:
+                        type: string
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
 
   /voices:
     get:
@@ -3125,6 +4320,233 @@ paths:
       responses:
         '200':
           description: Term substitution deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /pronunciations:
+    get:
+      tags:
+        - Custom Pronunciations
+      summary: List custom pronunciations
+      description: Retrieve all custom pronunciations for your team, with optional filters.
+      operationId: listPronunciations
+      parameters:
+        - name: language
+          in: query
+          schema:
+            type: string
+          description: Filter by language (e.g., en-us)
+        - name: domain
+          in: query
+          schema:
+            type: string
+          description: Filter by domain (e.g., medical)
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, ready, failed]
+          description: Filter by processing status
+        - name: active
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active state
+      responses:
+        '200':
+          description: List of custom pronunciations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomPronunciation'
+
+    post:
+      tags:
+        - Custom Pronunciations
+      summary: Create custom pronunciation
+      description: Upload a single pronunciation with a reference audio file.
+      operationId: createPronunciation
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - word
+                - audio
+              properties:
+                word:
+                  type: string
+                  description: The word or phrase (2-100 characters). Letters, accented characters, apostrophes, hyphens, and spaces only.
+                  example: "mounjaro"
+                audio:
+                  type: string
+                  format: binary
+                  description: Reference audio file (wav, flac, mp3, m4a, ogg, webm, aac). Duration 200ms-10s. Max 10MB.
+      responses:
+        '201':
+          description: Pronunciation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    $ref: '#/components/schemas/CustomPronunciation'
+        '422':
+          description: Validation error (e.g., duplicate word)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /pronunciations/bulk:
+    post:
+      tags:
+        - Custom Pronunciations
+      summary: Bulk create pronunciations from ZIP
+      description: Upload multiple pronunciations at once. Each audio file in the ZIP becomes a pronunciation — the filename (without extension) is used as the word.
+      operationId: bulkCreatePronunciations
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - zip
+              properties:
+                zip:
+                  type: string
+                  format: binary
+                  description: ZIP file containing audio files. Max 50 files, max 100MB total.
+      responses:
+        '201':
+          description: Bulk creation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  total_created:
+                    type: integer
+                    description: Number of pronunciations successfully created
+                  total_errors:
+                    type: integer
+                    description: Number of files that failed validation
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CustomPronunciation'
+                  errors:
+                    type: array
+                    items:
+                      type: object
+
+  /pronunciations/{uuid}:
+    get:
+      tags:
+        - Custom Pronunciations
+      summary: Get custom pronunciation
+      description: Retrieve a single custom pronunciation by UUID
+      operationId: getPronunciation
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pronunciation details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    $ref: '#/components/schemas/CustomPronunciation'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    patch:
+      tags:
+        - Custom Pronunciations
+      summary: Toggle pronunciation active status
+      description: Enable or disable a pronunciation without deleting it. Inactive pronunciations are not used during synthesis.
+      operationId: updatePronunciation
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - active
+              properties:
+                active:
+                  type: boolean
+                  description: Set to false to disable, true to re-enable
+      responses:
+        '200':
+          description: Pronunciation updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    $ref: '#/components/schemas/CustomPronunciation'
+
+    delete:
+      tags:
+        - Custom Pronunciations
+      summary: Delete custom pronunciation
+      description: Permanently remove a custom pronunciation. Takes effect immediately.
+      operationId: deletePronunciation
+      parameters:
+        - name: uuid
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Pronunciation deleted
           content:
             application/json:
               schema:
@@ -3759,6 +5181,10 @@ paths:
                 project_uuid:
                   type: string
                   description: Optional project UUID to store the clip
+                model:
+                  type: string
+                  description: Model to use for synthesis. Pass `chatterbox-turbo` to use the Turbo model for lower latency and paralinguistic tag support. If not specified, defaults to Chatterbox or Chatterbox Multilingual based on the voice. Note - Chatterbox-Turbo is supported by all Rapid English voices and Pre Built Library voices.
+                  example: "chatterbox-turbo"
                 precision:
                   type: string
                   enum: [MULAW, PCM_16, PCM_24, PCM_32]
@@ -3773,6 +5199,10 @@ paths:
                   type: boolean
                   default: false
                   description: Enable HD synthesis with small latency trade-off
+                apply_custom_pronunciations:
+                  type: boolean
+                  default: false
+                  description: When true, automatically applies your team's custom pronunciations to matching words in the input text. Defaults to false.
       responses:
         '200':
           description: Streaming audio response (chunked WAV)
@@ -4028,4 +5458,3 @@ paths:
                         type: string
                       status:
                         type: string
-

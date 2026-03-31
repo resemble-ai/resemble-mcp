@@ -5,23 +5,47 @@ slug: /audio-tools/audio-enhancement/create
 
 `POST https://app.resemble.ai/api/v2/audio_enhancements`
 
-Create a new audio enhancement job to improve audio quality.
+Submit an audio file for enhancement. Processing happens asynchronously in the background.
+
+## Request Parameters
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
-| `audio_file` | file | ✅ | Audio file to enhance (WAV, MP3, M4A, MP4, OGG, AAC, FLAC). |
-| `loudness_target_level` | number | ❌ | Target loudness level in LUFS. |
-| `loudness_peak_limit` | number | ❌ | Peak loudness limit in dB. |
-| `enhancement_level` | number | ❌ | Enhancement intensity level. |
+| `audio_file` | file | ✅ | Audio file to enhance (WAV, MP3, M4A, MP4, OGG, AAC, FLAC). Max 150 MB. |
+| `enhancement_engine` | string | ❌ | `"v1"` or `"v2"`. Default: `"v2"`. |
+| `remove_noise` | boolean | ❌ | Remove background noise. Default: `true`. Engine v2 only. |
+| `normalize` | boolean | ❌ | Normalize audio levels. Default: `true`. Engine v2 only. |
+| `studio_sound` | boolean | ❌ | Apply studio-quality enhancement. Default: `true`. Engine v2 only. |
+| `loudness_target_level` | integer | ❌ | Target loudness in LUFS (-70 to -5). Default: `-14`. Engine v1 only. |
+| `loudness_peak_limit` | integer | ❌ | Peak limit in dBTP (-9 to 0). Default: `-1`. Engine v1 only. |
+| `enhancement_level` | float | ❌ | Enhancement intensity (0.0 to 1.0). Default: `1.0`. Engine v1 only. |
+
+### v2 Example (Default)
 
 ```bash
-curl --request POST 'https://app.resemble.ai/api/v2/audio_enhancements' \
+curl -X POST 'https://app.resemble.ai/api/v2/audio_enhancements' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -F 'audio_file=@your_audio_file.wav' \
+  -F 'remove_noise=true' \
+  -F 'normalize=true' \
+  -F 'studio_sound=true'
+```
+
+### v1 Example (Legacy)
+
+```bash
+curl -X POST 'https://app.resemble.ai/api/v2/audio_enhancements' \
   -H 'Authorization: Bearer YOUR_API_TOKEN' \
   -F 'audio_file=@your_audio_file.mp3' \
+  -F 'enhancement_engine=v1' \
   -F 'enhancement_level=0.8' \
   -F 'loudness_target_level=-14' \
   -F 'loudness_peak_limit=-3'
 ```
+
+### Success Response
+
+**Status: `202 Accepted`**
 
 ```json
 {
@@ -31,6 +55,16 @@ curl --request POST 'https://app.resemble.ai/api/v2/audio_enhancements' \
 }
 ```
 
+### Error Responses
+
+| Status | Condition | Example |
+| --- | --- | --- |
+| `400` | Missing audio file | `{"success": false, "message": "audio_file parameter is required"}` |
+| `400` | Unsupported format | `{"success": false, "message": "Invalid audio file type: audio/pdf. Only WAV, MP3, M4A, MP4, OGG, AAC, and FLAC files are allowed."}` |
+| `400` | File too large | `{"success": false, "message": "File size exceeds maximum limit of 150MB"}` |
+| `403` | Plan doesn't include feature | `{"success": false, "message": "Your plan doesn't support audio enhancements."}` |
+| `403` | Monthly usage limit exceeded | `{"success": false, "message": "You've reached your plan's usage limit for this month. Please upgrade your plan to continue"}` |
+
 <Note>
-Maximum file size: 150 MB. Allowed formats: WAV, MP3, M4A, MP4, OGG, AAC, FLAC. Processing is asynchronous. Returns 202 Accepted status.
+Maximum file size: 150 MB. Allowed formats: WAV, MP3, M4A, MP4, OGG, AAC, FLAC. Processing is asynchronous — poll the [Get Enhancement](/audio-tools/audio-enhancement/get) endpoint for results.
 </Note>

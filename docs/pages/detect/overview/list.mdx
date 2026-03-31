@@ -1,0 +1,108 @@
+---
+title: List Detects
+slug: /detect/list
+---
+
+`GET https://app.resemble.ai/api/v2/detect`
+
+Retrieve a paginated list of all detect objects for the authenticated user's team.
+
+## Query Parameters
+
+| Parameter   | Type    | Required | Default | Description                         |
+| ----------- | ------- | -------- | ------- | ----------------------------------- |
+| `page`      | integer | ✅       | -       | Page number (must be >= 1).         |
+| `page_size` | integer | ❌       | 10      | Number of items per page (10-1000). |
+
+## Example Request
+
+```bash
+curl 'https://app.resemble.ai/api/v2/detect?page=1&page_size=20' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+## Response
+
+```json
+{
+  "success": true,
+  "page": 1,
+  "num_pages": 5,
+  "page_size": 20,
+  "total_count": 87,
+  "items": [
+    {
+      "uuid": "a1b2c3d4e5f6...",
+      "media_type": "audio",
+      "status": "completed",
+      "metrics": {
+        "label": "real",
+        "score": [0.92, 0.88, 0.95],
+        "aggregated_score": 0.92,
+        "consistency": 0.94,
+        "duration": 12.5
+      },
+      "video_metrics": null,
+      "image_metrics": null,
+      "intelligence": null,
+      "url": "https://storage.example.com/audio/file.wav",
+      "audio_url": "https://storage.example.com/audio/file.wav",
+      "filename": "file.wav",
+      "duration": 12.5,
+      "zero_retention_mode": false,
+      "media_redacted": false,
+      "media_deleted": false,
+      "file_deleted_at": null,
+      "visualize": true,
+      "audio_source_tracing_enabled": false,
+      "use_ood_detector": false,
+      "extra_params": {},
+      "error_message": null,
+      "created_at": "2025-12-10T15:30:00.000Z",
+      "updated_at": "2025-12-10T15:30:45.000Z"
+    }
+  ]
+}
+```
+
+## Response Fields
+
+| Field                          | Type           | Description                                                                                              |
+| ------------------------------ | -------------- | -------------------------------------------------------------------------------------------------------- |
+| `uuid`                         | string         | Unique identifier for the detect object.                                                                 |
+| `media_type`                   | string         | Type of media analyzed: `audio`, `video`, or `image`.                                                    |
+| `status`                       | string         | Processing status: `processing`, `completed`, or `failed`.                                               |
+| `metrics`                      | object         | Audio detection results (null if not applicable).                                                        |
+| `video_metrics`                | object         | Video detection results (null if not applicable).                                                        |
+| `image_metrics`                | object         | Image detection results (null if not applicable).                                                        |
+| `audio_source_tracing`         | object         | Source tracing results (only returned if audio is labeled `fake`).                                       |
+| `intelligence`                 | object         | Intelligence report (if requested during creation).                                                      |
+| `url`                          | string         | URL to the analyzed media file. `null` when Zero Retention Mode is enabled.                                     |
+| `audio_url`                    | string         | Alias of `url`. `null` when Zero Retention Mode is enabled.                                                     |
+| `filename`                     | string         | Original filename of the media. Tokenized (e.g., `redacted_<token>.<ext>`) when Zero Retention Mode is enabled. |
+| `zero_retention_mode`                 | boolean        | Whether Zero Retention Mode was enabled for this detect.                                                        |
+| `media_redacted`               | boolean        | `true` when Zero Retention Mode is active and media URLs are redacted.                                          |
+| `media_deleted`                | boolean        | `true` when the source file has been permanently deleted from storage.                                   |
+| `file_deleted_at`              | string \| null | ISO 8601 timestamp of when the file was purged, or `null` if not yet deleted.                            |
+| `duration`                     | number         | Duration of the media in seconds.                                                                        |
+| `visualize`                    | boolean        | Whether heatmap visualization was generated.                                                             |
+| `audio_source_tracing_enabled` | boolean        | Whether source tracing was enabled.                                                                      |
+| `use_ood_detector`             | boolean        | Whether out-of-distribution detection was used.                                                          |
+| `extra_params`                 | object         | Additional custom parameters.                                                                            |
+| `error_message`                | string         | Error message if processing failed.                                                                      |
+| `created_at`                   | string         | ISO 8601 timestamp of creation.                                                                          |
+| `updated_at`                   | string         | ISO 8601 timestamp of last update.                                                                       |
+
+<Accordion title="Legacy Response Fields">
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `pipeline` | `string \| null` | Deprecated field that may appear on older image/video detects returned by the API. Ignored on create for new detections. |
+
+</Accordion>
+
+## Notes
+
+- All endpoints return resources scoped to the authenticated user's team
+- `audio_source_tracing` results are only returned when the audio detection result is labeled as `fake`
+- The default page size is 10, with a maximum of 1000 items per page

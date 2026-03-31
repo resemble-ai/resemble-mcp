@@ -5,7 +5,7 @@ slug: /detect/watermark/apply
 
 > **Beta:** Watermark API is currently in beta. Please [contact us](https://www.resemble.ai/schedule-a-demo/?utm_source=resemble_docs_watermark) if you would like to be added to the beta program.
 
-Apply a watermark to an audio file using the provided URL.
+Apply a watermark to an audio, image, or video file using the provided URL. The media type is automatically detected from the file content.
 
 `POST https://app.resemble.ai/api/v2/watermark/apply`
 
@@ -13,10 +13,21 @@ Apply a watermark to an audio file using the provided URL.
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `url` | string | ✅ | HTTPS URL to audio file (must be valid media format). |
-| `qr_code` | string | ❌ | QR code URL prefix (watermark UUID will be appended). |
+| `url` | string | ✅ | HTTPS URL to the media file (audio, image, or video). |
+| `strength` | number | ❌ | Watermark strength for image/video (0.0-1.0, default: 0.2). Ignored for audio. |
+| `custom_message` | string | ❌ | Custom message to embed for image/video (default: "resembleai"). Ignored for audio. |
 
-## Example
+## Headers
+
+| Header | Value | Description |
+| --- | --- | --- |
+| `Authorization` | `Bearer YOUR_API_TOKEN` | Required. Your API token. |
+| `Content-Type` | `application/json` | Required. |
+| `Prefer` | `wait` | Optional. When set, the API processes synchronously and returns the completed result. |
+
+## Examples
+
+### Audio
 
 ```bash
 curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
@@ -27,6 +38,32 @@ curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
   }'
 ```
 
+### Image (synchronous)
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  -H 'Prefer: wait' \
+  --data '{
+    "url": "https://example.com/images/photo.png",
+    "strength": 0.2,
+    "custom_message": "resembleai"
+  }'
+```
+
+### Video
+
+```bash
+curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "url": "https://example.com/videos/clip.mp4",
+    "strength": 0.5
+  }'
+```
+
 ## Response
 
 ```json
@@ -34,8 +71,10 @@ curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
   "success": true,
   "item": {
     "uuid": "JOB_UUID",
+    "media_type": "image",
+    "source_media_url": "https://example.com/images/photo.png",
     "metrics": null,
-    "watermarked_audio": null,
+    "watermarked_media": null,
     "created_at": "2024-01-01T00:00:00.000Z",
     "updated_at": "2024-01-01T00:00:00.000Z"
   }
@@ -43,7 +82,7 @@ curl --request POST 'https://app.resemble.ai/api/v2/watermark/apply' \
 ```
 
 <Note>
-URL must be HTTPS and point to a valid media file. Processing is asynchronous.
+When the `Prefer: wait` header is set, `watermarked_media` will contain the signed URL to the watermarked file in the initial response. Without the header, processing is asynchronous and you must poll the result endpoint.
 </Note>
 
 ## Fetch Apply Result
@@ -67,9 +106,12 @@ curl --request GET 'https://app.resemble.ai/api/v2/watermark/apply/JOB_UUID/resu
   "success": true,
   "item": {
     "uuid": "JOB_UUID",
+    "media_type": "image",
+    "source_media_url": "https://example.com/images/photo.png",
+    "watermarked_media": "https://app.resemble.ai/rails/active_storage/...",
+    "metrics": null,
     "created_at": "2024-01-01T00:00:00.000Z",
-    "updated_at": "2024-01-01T00:00:00.000Z",
-    "watermarked_audio": "https://app.resemble.ai/rails/active_storage/..."
+    "updated_at": "2024-01-01T00:00:00.000Z"
   }
 }
 ```
@@ -78,13 +120,15 @@ curl --request GET 'https://app.resemble.ai/api/v2/watermark/apply/JOB_UUID/resu
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `success` | boolean | Indicates whether the operation was successful |
-| `item.uuid` | string | Unique identifier for the watermark job |
-| `item.created_at` | string | Timestamp of when the job was created |
-| `item.updated_at` | string | Timestamp of when the job was last updated |
-| `item.watermarked_audio` | string | Signed URL to the watermarked audio file |
+| `success` | boolean | Indicates whether the operation was successful. |
+| `item.uuid` | string | Unique identifier for the watermark job. |
+| `item.media_type` | string | Detected media type: `audio`, `image`, or `video`. |
+| `item.source_media_url` | string | The original source URL provided in the request. |
+| `item.watermarked_media` | string | Signed URL to the watermarked file. `null` while processing. |
+| `item.created_at` | string | Timestamp of when the job was created. |
+| `item.updated_at` | string | Timestamp of when the job was last updated. |
 
-> **Important:** The signed `watermarked_audio` URL expires; download and store the asset promptly.
+> **Important:** The signed `watermarked_media` URL expires; download and store the asset promptly.
 
 ## Error Handling
 
@@ -93,8 +137,8 @@ If the request is unsuccessful, you will receive an error response:
 ```json
 {
   "success": false,
-  "error": "Invalid audio file format. Please provide a WAV file."
+  "error": "File must be valid media format"
 }
 ```
 
-Ensure that you provide a valid URL, and that the audio file is in WAV format and accessible via HTTPS.
+Ensure that you provide a valid HTTPS URL pointing to a supported media file.

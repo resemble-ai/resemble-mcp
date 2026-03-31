@@ -17,12 +17,21 @@ curl --request GET 'https://app.resemble.ai/api/v2/detect/DETECT_UUID' \
 - **`metrics`** - Always includes a `label` (fake/real), `score` array with predictions per chunk, `consistency` field (for audio/video), and `aggregated_score`
 - **`image_metrics`** - Present for still images, contains type, label, score, visualization image (if requested), and nested analysis children
 - **`video_metrics`** - Present for videos, includes nested detections across frames with timestamps, certainty scores, and hierarchical results
+- **`audio_source_tracing`** - Present when audio is labeled as `fake`. Contains `label` identifying the likely source (e.g., `resemble_ai`, `elevenlabs`) or `real` if audio is not synthetic, and `error_message` (null on success)
+- **`intelligence`** - Present when intelligence analysis was requested. Contains `uuid`, `description`, `created_at` timestamp, and `detect_uuid`
+- **`zero_retention_mode`** - Boolean indicating whether Zero Retention Mode was enabled for this detect
+- **`media_redacted`** - Boolean, `true` when Zero Retention Mode is active and media URLs are redacted
+- **`media_deleted`** - Boolean, `true` when the source file has been permanently deleted from storage
+- **`file_deleted_at`** - ISO 8601 timestamp of when the file was purged, or `null` if not yet deleted
+- **`audio_url`** - Alias of `url`. Both are `null` when Zero Retention Mode is enabled
 
 ```json
 {
   "success": true,
   "item": {
-    "uuid": "5c17d732-0d10-4ee3-8c1d-41ad9b9142a1",
+    "uuid": "DETECTION_UUID",
+    "media_type": "audio",
+    "status": "completed",
     "metrics": {
       "label": "fake",
       "score": ["0.9", "0.8", "0.7"],
@@ -30,10 +39,14 @@ curl --request GET 'https://app.resemble.ai/api/v2/detect/DETECT_UUID' \
       "aggregated_score": "0.566"
     },
     "image_metrics": {
-      "label": "fake",
-      "score": "0.9",
-      "type": "facial",
+      "ifl": {
+        "score": 1,
+        "heatmap": "https://..."
+      },
+      "type": "FinalResult",
+      "label": "Fake",
       "image": "https://...",
+      "score": 1,
       "children": []
     },
     "video_metrics": {
@@ -66,7 +79,27 @@ curl --request GET 'https://app.resemble.ai/api/v2/detect/DETECT_UUID' \
           ]
         }
       ]
-    }
+    },
+    "audio_source_tracing": {
+      "label": "resemble_ai",
+      "error_message": null
+    },
+    "intelligence": {
+      "uuid": "INTELLIGENCE_UUID",
+      "description": "Adult male speaker with confident tone discussing...",
+      "created_at": "2024-01-15T10:30:05Z",
+      "detect_uuid": "DETECTION_UUID"
+    },
+    "url": "https://storage.example.com/audio/suspicious.wav",
+    "audio_url": "https://storage.example.com/audio/suspicious.wav",
+    "filename": "suspicious.wav",
+    "duration": 8.2,
+    "zero_retention_mode": false,
+    "media_redacted": false,
+    "media_deleted": false,
+    "file_deleted_at": null,
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:05Z"
   }
 }
 ```
@@ -74,3 +107,44 @@ curl --request GET 'https://app.resemble.ai/api/v2/detect/DETECT_UUID' \
 - `metrics` always reflects the aggregate prediction and confidence per chunk.
 - `image_metrics` appears for still images and contains visualization assets if requested.
 - `video_metrics` nests detections across frames with timestamps and certainty percentages.
+- `audio_source_tracing` is only returned when audio is labeled as `fake`. Use the standalone [Audio Source Tracing endpoints](/detect/audio-source-tracing) to access all source tracing reports.
+
+### Zero Retention Mode Response
+
+When `zero_retention_mode` was enabled on the original request, media URLs are redacted and the filename is tokenized:
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "DETECTION_UUID",
+    "media_type": "audio",
+    "status": "completed",
+    "metrics": {
+      "label": "fake",
+      "score": ["0.9", "0.8", "0.7"],
+      "consistency": "0.85",
+      "aggregated_score": "0.566"
+    },
+    "url": null,
+    "audio_url": null,
+    "filename": "redacted_abc123def4567890abcd1234.wav",
+    "duration": 8.2,
+    "zero_retention_mode": true,
+    "media_redacted": true,
+    "media_deleted": true,
+    "file_deleted_at": "2024-01-15T10:31:00Z",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:05Z"
+  }
+}
+```
+
+## Error Response (404)
+
+```json
+{
+  "success": false,
+  "message": "Detect not found"
+}
+```

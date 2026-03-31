@@ -1,0 +1,124 @@
+---
+title: Custom Pronunciations
+slug: /platform-management/custom-pronunciations
+---
+
+Teach Resemble AI how to pronounce specific words by providing reference audio. Custom pronunciations are scoped per team and are automatically applied during speech synthesis when enabled.
+
+```ts
+interface CustomPronunciation {
+  uuid: string;
+  word: string;
+  status: "pending" | "ready" | "failed";
+  active: boolean;
+  audio_url: string;
+  created_at: string;
+  updated_at: string;
+}
+```
+
+## How It Works
+
+When `apply_custom_pronunciations` is set to `true` in a synthesis request:
+
+1. **Word detection** — The input text is scanned for words and phrases that match entries in your pronunciation dictionary.
+2. **Pronunciation lookup** — Any matches are retrieved from your team's custom pronunciation library.
+3. **Guided synthesis** — The matched pronunciation references guide the model on how to say those words before generating the full utterance.
+4. **Output** — The final audio is generated with the correct pronunciations applied. Only the main speech is included in the output.
+
+Custom pronunciations add negligible latency to synthesis requests.
+
+## Quick Start
+
+1. **Upload a pronunciation** with a reference audio clip of the word spoken correctly.
+2. **Wait for processing** — the system processes your audio and prepares it for use (typically a few seconds).
+3. **Synthesize with** `apply_custom_pronunciations: true` — Resemble will automatically detect matching words and apply your custom pronunciations.
+
+```bash
+# Step 1: Create a pronunciation
+curl -X POST https://app.resemble.ai/api/v2/pronunciations \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "word=mounjaro" \
+  -F "audio=@mounjaro.wav"
+
+# Step 2: Use it in synthesis
+curl -X POST https://f.cluster.resemble.ai/synthesize \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "voice_uuid": "YOUR_VOICE_UUID",
+    "data": "The doctor prescribed mounjaro for the patient.",
+    "apply_custom_pronunciations": true
+  }'
+```
+
+## Limitations
+
+### Language Support
+
+Custom pronunciations are currently supported for **English** (`en-us`) only. Support for additional languages used by the multilingual model will be added in future releases.
+
+### Common Words
+
+The feature works best with **uncommon or domain-specific words** (medical terms, brand names, proper nouns, technical jargon). If a custom pronunciation is created for a common word that the model already knows well, the model may favor its built-in pronunciation over the custom one. Custom pronunciations serve as guidance to the model, and common words have strong existing associations.
+
+### Speaker Similarity
+
+The pronunciation reference audio should be recorded in a voice that is **similar to the voice used during synthesis**. If the pronunciation audio speaker sounds very different from the synthesis voice, it may cause undesirable results.
+
+If the accent of the custom pronunciation differs from the target voice accent, there is a risk of the model switching accents during synthesis. For best results, record pronunciation references using the same speaker or a speaker with a similar vocal quality and accent.
+
+### Audio Requirements
+
+| Constraint | Value |
+| --- | --- |
+| Minimum duration | 200ms |
+| Maximum duration | 10 seconds |
+| Maximum file size | 10MB |
+| Supported formats | wav, flac, mp3, m4a, ogg, webm, aac |
+
+Pronunciation audio should contain a **single, clear utterance** of the word. Avoid background noise, music, or multiple words in one clip.
+
+### Pronunciation Limit
+
+There is a limit of **2 pronunciations per team** on the free tier. Contact sales for additional custom vocabulary capacity.
+
+### Uniqueness
+
+Each word must be unique within a team + language + domain combination. Attempting to create a duplicate returns a `422 Unprocessable Entity` error. To change a pronunciation, delete the existing one and create a new one.
+
+## Best Practices
+
+1. **Use short, clean audio clips.** 1-3 seconds of a single word spoken clearly works best. Trim silence from the beginning and end.
+2. **Match the synthesis voice.** Record pronunciation references in a voice similar to your synthesis voice for the most natural results.
+3. **Target uncommon words.** Brand names, medical/scientific terms, foreign names, and technical jargon benefit the most. Common English words are already well-known to the model.
+4. **Check status before relying on a pronunciation.** Newly created pronunciations start as `"pending"` and transition to `"ready"` once processing is complete. Only `"ready"` pronunciations are applied during synthesis.
+5. **Use the `active` flag** to temporarily disable a pronunciation without deleting it. This is useful for A/B testing or troubleshooting.
+
+## FAQ
+
+**Q: What happens if `apply_custom_pronunciations` is omitted from the request?**
+It defaults to `false`. Pronunciation lookup is skipped entirely with zero added latency.
+
+**Q: How long does processing take after uploading a pronunciation?**
+Typically a few seconds. Poll the pronunciation's status via `GET /api/v2/pronunciations/:uuid` to check when it transitions from `"pending"` to `"ready"`.
+
+**Q: What happens if something goes wrong during pronunciation lookup?**
+The system fails gracefully. If custom pronunciations cannot be retrieved, synthesis proceeds normally without them. Your requests will never fail due to a pronunciation lookup issue.
+
+**Q: Does this work with all Resemble voices and models?**
+Custom pronunciations are compatible with all Chatterbox voices, including standard and cloned voices.
+
+**Q: What if my pronunciation isn't being applied?**
+Check the following:
+- Is the pronunciation status `"ready"`?
+- Is the pronunciation `active`?
+- Is `"apply_custom_pronunciations": true` set in your synthesis request?
+- Is the word an exact match? (Words are matched case-insensitively, and adjacent two-word phrases are also checked.)
+- Is the word too common? The model may favor its built-in pronunciation for well-known words.
+
+**Q: Can I use multi-word phrases as pronunciations?**
+Yes. The system checks for both individual words and adjacent two-word phrases. For example, a pronunciation for `"manmay nakhashi"` will match when those two words appear next to each other in the input text.
+
+**Q: What happens if I delete a pronunciation — is it removed immediately?**
+Yes. The pronunciation is removed immediately and subsequent synthesis requests will no longer use it.

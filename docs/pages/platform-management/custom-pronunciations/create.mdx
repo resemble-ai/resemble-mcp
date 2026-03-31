@@ -1,0 +1,41 @@
+---
+title: Create Pronunciation
+slug: /platform-management/custom-pronunciations/create
+---
+
+`POST https://app.resemble.ai/api/v2/pronunciations`
+
+Upload a single pronunciation with a reference audio file.
+
+### Request Body (multipart/form-data)
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `word` | string | Yes | The word or phrase (2-100 characters). Letters, accented characters, apostrophes, hyphens, and spaces only. |
+| `audio` | file | Yes | Reference audio file (wav, flac, mp3, m4a, ogg, webm, aac). Duration: 200ms-10s. Max size: 10MB. |
+
+```bash
+curl -X POST https://app.resemble.ai/api/v2/pronunciations \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -F "word=abemaciclib" \
+  -F "audio=@abemaciclib.wav"
+```
+
+### Response (201 Created)
+
+```json
+{
+  "success": true,
+  "item": {
+    "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "word": "abemaciclib",
+    "status": "pending",
+    "active": true,
+    "audio_url": "https://...",
+    "created_at": "2026-03-12T00:00:00.000Z",
+    "updated_at": "2026-03-12T00:00:00.000Z"
+  }
+}
+```
+
+The pronunciation starts with `status: "pending"` while the audio is being processed. Once processing completes, the status transitions to `"ready"` (usually within a few seconds) or `"failed"` if something went wrong. Only pronunciations with status `"ready"` are applied during synthesis.

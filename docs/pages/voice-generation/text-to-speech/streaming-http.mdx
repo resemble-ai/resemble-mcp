@@ -22,9 +22,11 @@ POST https://f.cluster.resemble.ai/stream
 | `voice_uuid` | string | Yes | Voice to synthesize. |
 | `data` | string | Yes | Text or SSML to synthesize (≤ 2,000 characters; partial SSML support). |
 | `project_uuid` | string | No | Project that will own the generated clip. |
+| `model` | string | No | Model to use for synthesis. Pass `chatterbox-turbo` to use the Turbo model for lower latency and paralinguistic tag support. If not specified, defaults to Chatterbox or Chatterbox Multilingual based on the voice. **Note:** Chatterbox-Turbo is supported by all Rapid English voices and Pre Built Library voices. |
 | `precision` | string | No | One of `PCM_32`, `PCM_24`, `PCM_16`, or `MULAW`. Defaults to `PCM_32`. |
 | `sample_rate` | number | No | One of `8000`, `16000`, `22050`, `32000`, `44100`, or `48000`. Defaults to `48000`. |
 | `use_hd` | boolean | No | Enables higher-definition synthesis with a small latency trade-off. Defaults to `false`. |
+| `apply_custom_pronunciations` | boolean | No | When `true`, automatically applies your team's [custom pronunciations](/platform-management/custom-pronunciations) to matching words in the input text. Defaults to `false`. |
 
 ### Response
 

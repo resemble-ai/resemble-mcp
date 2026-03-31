@@ -1,0 +1,41 @@
+---
+title: List Pronunciations
+slug: /platform-management/custom-pronunciations/list
+---
+
+`GET https://app.resemble.ai/api/v2/pronunciations`
+
+Retrieve all custom pronunciations for your team, with optional filters.
+
+### Query Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `language` | string | Filter by language (e.g., `en-us`). |
+| `domain` | string | Filter by domain (e.g., `medical`). |
+| `status` | string | Filter by status: `pending`, `ready`, or `failed`. |
+| `active` | boolean | Filter by active state. |
+
+```bash
+curl "https://app.resemble.ai/api/v2/pronunciations?status=ready" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### Response
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "word": "mounjaro",
+      "status": "ready",
+      "active": true,
+      "audio_url": "https://...",
+      "created_at": "2026-03-12T00:00:00.000Z",
+      "updated_at": "2026-03-12T00:00:00.000Z"
+    }
+  ]
+}
+```

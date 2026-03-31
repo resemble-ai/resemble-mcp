@@ -1,0 +1,38 @@
+---
+title: Intelligence
+slug: /detect/intelligence
+---
+
+Analyzes media files (audio, video, or image) and returns comprehensive intelligence including speaker details, transcription, emotion detection, authenticity analysis, AI abnormalities, and misinformation signals.
+
+```ts
+interface IntelligenceRequest {
+  media_token?: string;
+  url?: string;
+  detect_id?: string;
+  media_type?: "audio" | "video" | "image";
+  json?: boolean;
+  callback_url?: string;
+}
+
+interface IntelligenceResponse {
+  success: boolean;
+  item: {
+    uuid: string;
+    description: string | IntelligenceDetails;
+    created_at: string;
+    detect_uuid?: string;
+    media_type: "audio" | "video" | "image";
+  };
+}
+```
+
+Set `json=true` to receive structured data instead of a prose description. For images, `json` defaults to `true`.
+
+Provide `callback_url` to switch the endpoint into async mode. In that case the create request returns `202 Accepted` immediately and the final intelligence payload is delivered to your callback URL via HTTP `POST`.
+
+## Related Endpoints
+
+- [Run Intelligence](/detect/intelligence/create) - Create a new intelligence analysis
+- [List Intelligences](/detect/intelligence/list) - Get all intelligence reports with pagination
+- [Get Intelligence](/detect/intelligence/get) - Retrieve a single intelligence report by UUID

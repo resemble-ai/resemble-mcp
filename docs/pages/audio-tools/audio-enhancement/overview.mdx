@@ -3,15 +3,30 @@ title: Audio Enhancement
 slug: /audio-tools/audio-enhancement
 ---
 
-Improve raw recordings by normalizing loudness, enforcing peak ceilings, and reducing noise.
+Enhance audio files by removing background noise, normalizing loudness, and applying studio-quality processing. The API is asynchronous — you submit an audio file, receive a tracking UUID, then poll for the result.
 
 ## Workflow
 
-1. Create an enhancement job with your audio file and optional parameters.
-2. Poll for completion using the returned UUID.
-3. Download the enhanced audio when ready.
+1. Submit an audio file via the [Create Enhancement](/audio-tools/audio-enhancement/create) endpoint.
+2. Receive a UUID and poll the [Get Enhancement](/audio-tools/audio-enhancement/get) endpoint until status is `completed` or `failed`.
+3. Download the enhanced audio from the `enhanced_audio_url`.
 
-## Parameters
+## Enhancement Engines
+
+| Engine | Default | Description |
+| --- | --- | --- |
+| `v2` | ✅ | Noise removal, normalization, and studio sound. Recommended for most use cases. |
+| `v1` (legacy) | | Loudness normalization with configurable target levels and enhancement intensity. Will be sunset in a future release. |
+
+## v2 Parameters
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `remove_noise` | boolean | `true` | Remove background noise. |
+| `normalize` | boolean | `true` | Normalize audio levels. |
+| `studio_sound` | boolean | `true` | Apply studio-quality enhancement. |
+
+## v1 Parameters (Legacy)
 
 | Parameter | Range | Default | Description |
 | --- | --- | --- | --- |
@@ -19,4 +34,16 @@ Improve raw recordings by normalizing loudness, enforcing peak ceilings, and red
 | `loudness_target_level` | `-70` – `-5` LUFS | `-14` | Desired integrated loudness. |
 | `loudness_peak_limit` | `-9` – `0` dBTP | `-1` | Maximum permitted peak. Lower values add headroom. |
 
-Tune these values to match your distribution requirements (e.g., streaming platforms typically target -14 LUFS with -1 dBTP ceiling).
+## Accepted Audio Formats
+
+WAV, MP3, M4A, MP4, OGG, AAC, FLAC. Maximum file size is **150 MB**.
+
+## Polling Best Practices
+
+- **Recommended interval**: Poll every 5–10 seconds.
+- **Timeout**: Jobs timeout after approximately 5 minutes. If a job hasn't completed by then, it will be marked as `failed`.
+- **No retries**: Failed jobs are not automatically retried. Submit a new request if needed.
+
+## Billing
+
+Audio enhancement is a metered product billed per second of processed audio. If you exceed the limit, further requests return `403 Forbidden` until the next billing cycle. Failed jobs are not billed.

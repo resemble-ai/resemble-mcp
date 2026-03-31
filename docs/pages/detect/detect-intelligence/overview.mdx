@@ -1,0 +1,58 @@
+---
+title: Detect Intelligence
+slug: /detect/detect-intelligence
+---
+
+Ask natural-language questions about completed deepfake detection reports using the detection's full context.
+
+<Note>
+This is different from the standalone [Intelligence](/detect/intelligence) feature, which analyzes raw media for speaker details, transcription, and emotion. Detect Intelligence asks questions about **already-completed detection reports**.
+</Note>
+
+## Request & Response Schemas
+
+```ts
+interface AskDetectQuestionRequest {
+  query: string; // natural-language question about the detection
+}
+
+interface DetectQuestionItem {
+  uuid: string;
+  detect_uuid: string;
+  query: string;
+  answer: string | null;       // null until status is "completed"
+  status: "pending" | "processing" | "completed" | "failed";
+  error_message: string | null;
+  created_at: string;          // ISO 8601
+  updated_at: string;          // ISO 8601
+}
+```
+
+## Async Workflow
+
+1. Ensure the detection status is `completed`.
+2. Submit a question via the [Ask a Question](/detect/detect-intelligence/create) endpoint.
+3. The API returns `202 Accepted` with the question UUID and `status: "pending"`.
+4. Poll the [Get Answer](/detect/detect-intelligence/get) endpoint until `status` is `"completed"` or `"failed"`.
+5. Read the `answer` field from the completed response.
+
+## Example Questions
+
+| Category | Example Query |
+| --- | --- |
+| Summary | "Summarize the detection results in plain language." |
+| Confidence | "How confident is the model that this audio is fake?" |
+| Comparison | "How do the audio and video detection results differ?" |
+
+## Polling Best Practices
+
+- Use exponential backoff starting at 1 second, doubling up to a maximum of 10 seconds.
+- Most answers complete within 5–15 seconds.
+- Check the `status` field — stop polling once it reaches `completed` or `failed`.
+
+## Related Endpoints
+
+- [Ask a Question](/detect/detect-intelligence/create) — Submit a question about a detection
+- [Get Answer](/detect/detect-intelligence/get) — Poll for the answer
+- [Deepfake Detection](/detect) — Submit and manage detection jobs
+- [Intelligence](/detect/intelligence) — Standalone media intelligence analysis
