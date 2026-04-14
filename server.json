@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.resemble-ai/resemble-mcp",
+  "title": "Resemble AI",
+  "description": "Official Resemble AI MCP server. Exposes documentation and OpenAPI schemas for voice cloning, text-to-speech, speech-to-speech, speech-to-text, and deepfake detection so AI agents can generate accurate code against the Resemble API.",
+  "repository": {
+    "url": "https://github.com/resemble-ai/resemble-mcp",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "remotes": [
+    {
+      "type": "sse",
+      "url": "https://mcp.resemble.ai/sse"
+    }
+  ]
+}
