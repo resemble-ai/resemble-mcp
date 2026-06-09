@@ -25,14 +25,34 @@ from urllib.parse import urlparse
 import anyio
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 RESEMBLE_API_BASE = "https://app.resemble.ai/api/v2"
 TERMINAL_STATUSES = {"completed", "failed", "error", "cancelled", "success"}
 MAX_WAIT_CEILING = 180  # hard cap on server-side polling, seconds
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=30.0, pool=10.0)
 
+# DNS-rebinding protection: the SDK's TrustedHost check defaults to
+# localhost-only, which 421s every request once deployed behind the real
+# domain. Allow the public host (+ local dev) explicitly.
+_TRANSPORT_SECURITY = TransportSecuritySettings(
+    enable_dns_rebinding_protection=True,
+    allowed_hosts=[
+        "mcp.resemble.ai",
+        "mcp.resemble.ai:443",
+        "localhost:*",
+        "127.0.0.1:*",
+    ],
+    allowed_origins=[
+        "https://mcp.resemble.ai",
+        "http://localhost:*",
+        "http://127.0.0.1:*",
+    ],
+)
+
 action_mcp = FastMCP(
     "resemble-actions",
+    transport_security=_TRANSPORT_SECURITY,
     instructions=(
         "Execute Resemble AI media-safety operations: deepfake detection on audio/"
         "image/video, media intelligence (transcription, speaker info, emotion, "
