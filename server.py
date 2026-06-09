@@ -971,15 +971,34 @@ def run_sse():
 
     async def health(request):
         """Health check endpoint for Render/deployment platforms."""
-        return JSONResponse({"status": "healthy", "server": "resemble-ai-docs"})
+        return JSONResponse({
+            "status": "healthy",
+            "server": "resemble-ai-docs",
+            "endpoints": {"docs_sse": "/sse", "actions_streamable_http": "/mcp"},
+        })
 
-    # Create Starlette app with CORS middleware
+    # Action MCP server (Detect + Intelligence execution tools) — Streamable HTTP.
+    # Docs tools stay on /sse; action tools live at /mcp with BYO-key auth.
+    from action_server import action_mcp
+    actions_app = action_mcp.streamable_http_app()
+
+    import contextlib
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app_):
+        async with action_mcp.session_manager.run():
+            yield
+
+    # Create Starlette app with CORS middleware. The actions app is mounted at
+    # root LAST so /health, /sse and /messages/ keep matching first; the actions
+    # app itself only answers on its /mcp path.
     starlette_app = Starlette(
         debug=False,
         routes=[
             Route("/health", health, methods=["GET"]),
             Route("/sse", handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
+            Mount("/", app=actions_app),
         ],
         middleware=[
             Middleware(
@@ -991,15 +1010,16 @@ def run_sse():
                 expose_headers=["Mcp-Session-Id"],
             )
         ],
+        lifespan=lifespan,
     )
 
     # Get port from environment (Render sets this)
     port = int(os.environ.get("PORT", 8000))
 
-    print(f"Starting Resemble AI Docs MCP Server (SSE mode)")
+    print(f"Starting Resemble AI MCP Servers (docs SSE + actions Streamable HTTP)")
     print(f"Health check: http://0.0.0.0:{port}/health")
-    print(f"SSE endpoint: http://0.0.0.0:{port}/sse")
-    print(f"Messages endpoint: http://0.0.0.0:{port}/messages/")
+    print(f"Docs SSE endpoint: http://0.0.0.0:{port}/sse")
+    print(f"Actions endpoint: http://0.0.0.0:{port}/mcp")
 
     uvicorn.run(starlette_app, host="0.0.0.0", port=port)
 
