@@ -201,10 +201,20 @@ async def _stream_agent_run(api_key: str, preset_id: str, fields: list[tuple[str
     # (None, value) makes httpx emit a plain multipart field with no filename.
     files = [(name, (None, value)) for name, value in fields]
     summary: dict[str, Any] = {
-        "run_id": None, "label": None, "score": None, "agent_ran": None,
-        "verdict": None, "tools_used": [], "completed": False,
+        "run_id": None, "label": None, "score": None, "report_url": None,
+        "agent_ran": None, "verdict": None, "tools_used": [], "completed": False,
         "timed_out": False, "error": None,
     }
+
+    def absorb_detect(detect: Any) -> None:
+        """Detect evidence arrives either as a standalone `detect` frame or nested
+        in the run_detect `tool_result`; observed runs only carry the latter."""
+        if not isinstance(detect, dict):
+            return
+        summary["label"] = detect.get("label", summary["label"])
+        summary["score"] = detect.get("score", summary["score"])
+        summary["report_url"] = detect.get("report_url", summary["report_url"])
+
     async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
         async with client.stream(
             "POST", f"{RESEMBLE_API_BASE}/agents/{preset_id}/run",
@@ -227,21 +237,23 @@ async def _stream_agent_run(api_key: str, preset_id: str, fields: list[tuple[str
                     if kind == "run_started":
                         summary["run_id"] = frame.get("run_id")
                     elif kind == "detect":
-                        detect = frame.get("detect") or {}
-                        summary["label"] = detect.get("label")
-                        summary["score"] = detect.get("score")
+                        absorb_detect(frame.get("detect"))
                     elif kind == "gate":
                         summary["agent_ran"] = frame.get("agent_ran")
                     elif kind == "tool_call":
                         tool = frame.get("tool")
                         if tool and tool not in summary["tools_used"] and len(summary["tools_used"]) < 25:
                             summary["tools_used"].append(tool)
+                    elif kind == "tool_result":
+                        absorb_detect(frame.get("detect"))
                     elif kind == "final_verdict":
                         summary["verdict"] = frame.get("intelligence")
                     elif kind == "error":
                         summary["error"] = frame.get("message")
                     elif kind == "done":
-                        summary["completed"] = True
+                        # A failed investigation still ends on `done` after its
+                        # error frame; don't report that as a clean completion.
+                        summary["completed"] = summary["error"] is None
                         break
     summary["timed_out"] = not summary["completed"] and summary["error"] is None
     return _sanitize(summary)
