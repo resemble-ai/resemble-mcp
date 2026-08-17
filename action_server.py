@@ -18,6 +18,7 @@ Security model — BYO key, zero storage:
 """
 
 import ipaddress
+import json
 import re
 from typing import Any, Optional
 from urllib.parse import urlparse
@@ -57,9 +58,12 @@ action_mcp = FastMCP(
         "Execute Resemble AI media-safety operations: deepfake detection on audio/"
         "image/video, media intelligence (transcription, speaker info, emotion, "
         "misinformation), audio source tracing, and invisible watermarking. Media "
-        "must be a public HTTPS URL. Authenticate every request with your Resemble "
-        "API key as a Bearer token. Never declare media real or fake without a "
-        "completed detection result; always report the label with its score."
+        "must be a public HTTPS URL. Detect Agents run managed multi-step "
+        "investigations (insurance claim, breaking news, ID, document, evidence, "
+        "social content) that wrap detection in evidence gathering and a written "
+        "assessment. Authenticate every request with your Resemble API key as a "
+        "Bearer token. Never declare media real or fake without a completed "
+        "detection result; always report the label with its score."
     ),
     stateless_http=True,
     json_response=True,
@@ -161,6 +165,86 @@ async def _request(api_key: str, method: str, path: str,
         detail = data.get("message") if isinstance(data, dict) else None
         raise ValueError(f"Resemble API error (HTTP {resp.status_code}): {detail or path}")
     return data
+
+
+_PRESET_ID_RE = re.compile(r"^[a-z][a-z0-9_]{2,63}$")
+
+
+def _agent_error(status_code: int, body: str) -> ValueError:
+    """Pre-stream failures on an agent run come back as plain JSON, not SSE."""
+    try:
+        detail = (json.loads(body) or {}).get("message")
+    except ValueError:
+        detail = None
+    if status_code in (401, 403):
+        return ValueError(f"Resemble authentication or access failed - {detail or 'check your API key.'}")
+    if status_code == 402:
+        return ValueError(
+            f"Detect Agent run not permitted (HTTP 402): {detail or 'billing or credits blocked the run'}. "
+            "Runs need the D-Agent tier bundle or a remaining free run - check "
+            "free_runs_remaining / entitled from list_detect_agents."
+        )
+    if status_code == 404:
+        return ValueError(f"Unknown Detect Agent - {detail or 'check preset_id against list_detect_agents.'}")
+    return ValueError(f"Resemble API error (HTTP {status_code}): {detail or 'agent run failed'}")
+
+
+async def _stream_agent_run(api_key: str, preset_id: str, fields: list[tuple[str, str]],
+                            max_wait_seconds: float) -> dict:
+    """POST a multipart agent run and fold its SSE stream into a compact summary.
+
+    Token/narration frames are dropped: they are large and the run is persisted
+    server-side, so the full transcript stays retrievable via
+    get_detect_agent_run even when this call gives up early.
+    """
+    budget = _clamp(max_wait_seconds, 5, MAX_WAIT_CEILING, 180)
+    # (None, value) makes httpx emit a plain multipart field with no filename.
+    files = [(name, (None, value)) for name, value in fields]
+    summary: dict[str, Any] = {
+        "run_id": None, "label": None, "score": None, "agent_ran": None,
+        "verdict": None, "tools_used": [], "completed": False,
+        "timed_out": False, "error": None,
+    }
+    async with httpx.AsyncClient(timeout=UPSTREAM_TIMEOUT) as client:
+        async with client.stream(
+            "POST", f"{RESEMBLE_API_BASE}/agents/{preset_id}/run",
+            files=files,
+            headers={"Authorization": f"Bearer {api_key}", "Accept": "text/event-stream"},
+        ) as resp:
+            if resp.status_code >= 400:
+                raise _agent_error(resp.status_code, (await resp.aread()).decode("utf-8", "replace"))
+            with anyio.move_on_after(budget):
+                async for line in resp.aiter_lines():
+                    if not line.startswith("data:"):
+                        continue
+                    try:
+                        frame = json.loads(line[5:].strip())
+                    except ValueError:
+                        continue
+                    if not isinstance(frame, dict):
+                        continue
+                    kind = frame.get("type")
+                    if kind == "run_started":
+                        summary["run_id"] = frame.get("run_id")
+                    elif kind == "detect":
+                        detect = frame.get("detect") or {}
+                        summary["label"] = detect.get("label")
+                        summary["score"] = detect.get("score")
+                    elif kind == "gate":
+                        summary["agent_ran"] = frame.get("agent_ran")
+                    elif kind == "tool_call":
+                        tool = frame.get("tool")
+                        if tool and tool not in summary["tools_used"] and len(summary["tools_used"]) < 25:
+                            summary["tools_used"].append(tool)
+                    elif kind == "final_verdict":
+                        summary["verdict"] = frame.get("intelligence")
+                    elif kind == "error":
+                        summary["error"] = frame.get("message")
+                    elif kind == "done":
+                        summary["completed"] = True
+                        break
+    summary["timed_out"] = not summary["completed"] and summary["error"] is None
+    return _sanitize(summary)
 
 
 async def _poll(api_key: str, path: str, max_wait_seconds: float) -> Any:
@@ -355,4 +439,72 @@ async def trace_audio_source(uuid: str, ctx: Context) -> dict:
     if not re.fullmatch(r"[0-9a-fA-F-]{8,40}", (uuid or "").strip()):
         raise ValueError("uuid must be a Resemble source-tracing/detection id.")
     result = await _request(api_key, "GET", f"/audio_source_tracings/{uuid.strip()}")
+    return {"result": _sanitize(result)}
+
+
+@action_mcp.tool()
+async def list_detect_agents(ctx: Context) -> dict:
+    """List the managed Detect Agents — investigators that wrap detection in a
+    multi-step workflow ending in a written assessment. Returns each agent's
+    preset_id plus this team's run allowance (free_runs_remaining, entitled),
+    which is worth checking before starting a run."""
+    api_key = _api_key_from_request(ctx)
+    result = await _request(api_key, "GET", "/agents")
+    items = result.get("items") if isinstance(result, dict) else None
+    return {
+        "agents": [
+            {"preset_id": a.get("preset_id"), "name": a.get("name"),
+             "tier": a.get("tier"), "tagline": a.get("tagline")}
+            for a in (items or []) if isinstance(a, dict)
+        ],
+        "free_runs_remaining": (result or {}).get("free_runs_remaining"),
+        "free_runs_limit": (result or {}).get("free_runs_limit"),
+        "entitled": (result or {}).get("entitled"),
+    }
+
+
+@action_mcp.tool()
+async def run_detect_agent_investigation(
+    preset_id: str,
+    url: str,
+    ctx: Context,
+    query: str = "",
+    check_urls: str = "",
+    max_wait_seconds: int = 180,
+) -> dict:
+    """Run a managed Detect Agent investigation against media at a public HTTPS
+    URL and return its verdict. preset_id is one of: investigate_social_content,
+    review_insurance_claim, verify_breaking_news, verify_document,
+    verify_evidence, verify_id (confirm with list_detect_agents). query states
+    the investigation objective; check_urls adds URLs for the agent to check.
+
+    Consumes a run of the team's allowance. `label`/`score` are the Detect
+    evidence and are the only basis for an authenticity claim; `verdict` is the
+    agent's written assessment. If timed_out is true the investigation is still
+    running server-side — retrieve it later with get_detect_agent_run."""
+    api_key = _api_key_from_request(ctx)
+    clean_preset = (preset_id or "").strip()
+    if not _PRESET_ID_RE.match(clean_preset):
+        raise ValueError("preset_id must be a Detect Agent identifier, e.g. verify_document.")
+    fields = [("url", _validate_media_url(url))]
+    if (query or "").strip():
+        fields.append(("query", query.strip()))
+    if (check_urls or "").strip():
+        fields.append(("check_urls", check_urls.strip()))
+    return await _stream_agent_run(api_key, clean_preset, fields, max_wait_seconds)
+
+
+@action_mcp.tool()
+async def get_detect_agent_run(preset_id: str, run_id: str, ctx: Context) -> dict:
+    """Fetch a persisted Detect Agent investigation by run_id, including its full
+    event transcript. Use after run_detect_agent_investigation reported
+    timed_out, or to re-read an earlier investigation."""
+    api_key = _api_key_from_request(ctx)
+    clean_preset = (preset_id or "").strip()
+    clean_run = (run_id or "").strip()
+    if not _PRESET_ID_RE.match(clean_preset):
+        raise ValueError("preset_id must be a Detect Agent identifier, e.g. verify_document.")
+    if not re.fullmatch(r"[0-9a-fA-F-]{8,40}", clean_run):
+        raise ValueError("run_id must be the run id returned by run_detect_agent_investigation.")
+    result = await _request(api_key, "GET", f"/agents/{clean_preset}/runs/{clean_run}")
     return {"result": _sanitize(result)}

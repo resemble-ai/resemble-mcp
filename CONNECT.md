@@ -113,4 +113,5 @@ mcpServers:
 
 ## Tools exposed
 `detect_deepfake` · `get_detection` · `analyze_media` · `ask_about_detection` ·
-`detect_watermark` · `apply_watermark` · `trace_audio_source`
+`detect_watermark` · `apply_watermark` · `trace_audio_source` ·
+`list_detect_agents` · `run_detect_agent_investigation` · `get_detect_agent_run`
