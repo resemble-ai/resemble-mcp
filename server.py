@@ -297,7 +297,7 @@ TOPICS = {
     },
     "detect": {
         "name": "Deepfake Detection & Safety",
-        "description": "Detect AI-generated audio, apply/detect watermarks, verify identity, audio source tracing, and intelligence analysis",
+        "description": "Detect AI-generated audio, image, video, and text, apply/detect watermarks, verify identity, audio source tracing, and intelligence analysis",
         "pages": [
             "detect/overview",
             "detect/overview/create",
@@ -320,11 +320,13 @@ TOPICS = {
             "detect/watermark/overview",
             "detect/watermark/apply",
             "detect/watermark/detect",
+            "detect/text/overview",
         ],
         "keywords": ["detect", "deepfake", "fake", "watermark", "watermarking", "audio watermark",
                      "identity", "verify", "authentic", "synthetic", "ai detection", "apply watermark",
                      "detect watermark", "intelligence", "audio intelligence", "source tracing",
-                     "audio source tracing"]
+                     "audio source tracing", "text detection", "text_detect", "ai text",
+                     "ai-generated text", "ai written", "llm text", "chatgpt", "slop"]
     },
     "agents": {
         "name": "AI Agents",

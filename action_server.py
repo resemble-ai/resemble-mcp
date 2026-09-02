@@ -3,7 +3,8 @@ Resemble AI Action MCP Server — Detect + Intelligence execution tools.
 
 Runs alongside the docs server (server.py). Where the docs server answers questions
 ABOUT Resemble, this one RUNS Resemble: deepfake detection, media intelligence,
-audio source tracing, and watermarking against https://app.resemble.ai/api/v2.
+audio source tracing, AI-text detection, and watermarking against
+https://app.resemble.ai/api/v2.
 
 Transport: Streamable HTTP (stateless), mounted at /mcp by server.py's SSE runner.
 
@@ -33,6 +34,16 @@ TERMINAL_STATUSES = {"completed", "failed", "error", "cancelled", "success"}
 MAX_WAIT_CEILING = 180  # hard cap on server-side polling, seconds
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=30.0, pool=10.0)
 
+# Text detection. The detector abstains below 25 words (no threshold separates
+# casual human writing from AI text down there), and the public API rejects
+# such requests with a 400 - so short-circuit locally and never spend a call.
+TEXT_MIN_WORDS = 25
+TEXT_MAX_CHARS = 100_000
+# The text model scales to zero; the first job after idle sits in `processing`
+# for minutes while it loads (3-4 by spec, ~9 observed in production on
+# 2026-09-02). Media polling's ceiling is too short for that.
+TEXT_WAIT_CEILING = 300
+
 # DNS-rebinding protection: the SDK's TrustedHost check defaults to
 # localhost-only, which 421s every request once deployed behind the real
 # domain. Allow the public host (+ local dev) explicitly.
@@ -56,14 +67,17 @@ action_mcp = FastMCP(
     transport_security=_TRANSPORT_SECURITY,
     instructions=(
         "Execute Resemble AI media-safety operations: deepfake detection on audio/"
-        "image/video, media intelligence (transcription, speaker info, emotion, "
-        "misinformation), audio source tracing, and invisible watermarking. Media "
-        "must be a public HTTPS URL. Detect Agents run managed multi-step "
+        "image/video, AI-generated text detection (essays, emails, posts, reviews), "
+        "media intelligence (transcription, speaker info, emotion, misinformation), "
+        "audio source tracing, and invisible watermarking. Media "
+        "must be a public HTTPS URL; text is sent inline and needs 25+ words. "
+        "Detect Agents run managed multi-step "
         "investigations (insurance claim, breaking news, ID, document, evidence, "
         "social content) that wrap detection in evidence gathering and a written "
         "assessment. Authenticate every request with your Resemble API key as a "
-        "Bearer token. Never declare media real or fake without a completed "
-        "detection result; always report the label with its score."
+        "Bearer token. Never declare media real or fake, or text AI- or human-"
+        "written, without a completed detection result; always report the label "
+        "with its score (for text: prediction with its confidence)."
     ),
     stateless_http=True,
     json_response=True,
@@ -259,14 +273,24 @@ async def _stream_agent_run(api_key: str, preset_id: str, fields: list[tuple[str
     return _sanitize(summary)
 
 
-async def _poll(api_key: str, path: str, max_wait_seconds: float) -> Any:
-    budget = _clamp(max_wait_seconds, 1, MAX_WAIT_CEILING, 120)
+async def _poll(api_key: str, path: str, max_wait_seconds: float,
+                ceiling: float = MAX_WAIT_CEILING,
+                ctx: Optional[Context] = None) -> Any:
+    budget = _clamp(max_wait_seconds, 1, ceiling, 120)
     elapsed, delay = 0.0, 2.0
     last = await _request(api_key, "GET", path)
     while True:
         status = str(_item(last).get("status") or "").lower()
         if not status or status in TERMINAL_STATUSES or elapsed >= budget:
             return last
+        if ctx is not None:
+            # Long waits (text cold start) outlive many clients' request
+            # timeouts; progress frames let clients that honour them keep
+            # the call alive. No-op when the client sent no progress token.
+            try:
+                await ctx.report_progress(elapsed, budget)
+            except Exception:  # noqa: BLE001 - progress is best-effort
+                pass
         await anyio.sleep(delay)
         elapsed += delay
         delay = min(10.0, delay + 1.0)
@@ -335,6 +359,102 @@ async def get_detection(uuid: str, ctx: Context, max_wait_seconds: int = 60) -> 
         raise ValueError("uuid must be a Resemble detection id.")
     result = await _poll(api_key, f"/detect/{uuid.strip()}", max_wait_seconds)
     return {"result": _sanitize(result)}
+
+
+def _text_summary(uuid: Optional[str], result: Any, word_count: Optional[int] = None) -> dict:
+    item = _item(result)
+    status = item.get("status")
+    # The API echoes the submitted text back; the caller already has it and it
+    # can be 100k chars, so keep it out of the tool result.
+    trimmed = _sanitize(result)
+    if isinstance(trimmed, dict) and isinstance(trimmed.get("item"), dict):
+        trimmed["item"] = {k: v for k, v in trimmed["item"].items() if k != "text_content"}
+    out: dict[str, Any] = {
+        "status": status,
+        "prediction": item.get("prediction"),
+        "confidence": item.get("confidence"),
+        "uuid": uuid,
+        "result": trimmed,
+    }
+    if word_count is not None:
+        out["word_count"] = word_count
+    if str(status or "").lower() == "processing":
+        out["message"] = (
+            "Still processing. The text model cold-starts when idle and jobs queue "
+            "behind it, so a result can take several minutes (up to ~10 observed); "
+            "call get_text_detection with this uuid to keep waiting."
+        )
+    elif item.get("prediction") == "uncertain":
+        out["message"] = "The detector abstained: not enough text to judge. Do not report this as human or AI."
+    return out
+
+
+@action_mcp.tool()
+async def detect_ai_text(
+    text: str,
+    ctx: Context,
+    threshold: float = 0.5,
+    zero_retention_mode: bool = False,
+    max_wait_seconds: int = 240,
+) -> dict:
+    """Detect whether TEXT (an essay, email, post, review, comment, article) was
+    written by an AI language model. Needs at least 25 words: shorter text comes
+    back as prediction 'uncertain' with no model call - concatenate several
+    messages from the same author to reach the minimum. Returns prediction
+    ('ai' | 'human'), confidence (how sure the model is of that prediction; it
+    is NOT an AI probability, so 'human' at 0.95 means strongly human), and the
+    full result. Only the first ~400 words are read; chunk longer documents.
+    A result can take several minutes when the model is cold or jobs are
+    queued - if status is still 'processing' when the wait budget ends, resume
+    with get_text_detection(uuid). Detection is probabilistic, not proof of authorship."""
+    api_key = _api_key_from_request(ctx)
+    clean = (text or "").strip()
+    if not clean:
+        raise ValueError("text is required.")
+    if len(clean) > TEXT_MAX_CHARS:
+        raise ValueError(
+            f"text must be {TEXT_MAX_CHARS:,} characters or fewer (got {len(clean):,}). "
+            "Split it into ~300-word chunks and submit each."
+        )
+    word_count = len(clean.split())
+    if word_count < TEXT_MIN_WORDS:
+        return {
+            "status": "not_scored",
+            "prediction": "uncertain",
+            "confidence": 0.0,
+            "reason": "insufficient_text",
+            "word_count": word_count,
+            "min_words": TEXT_MIN_WORDS,
+            "message": (
+                f"Not enough text to judge: {word_count} words, the detector needs at least "
+                f"{TEXT_MIN_WORDS}. Combine several messages from the same author and retry. "
+                "Do not report this as human or AI."
+            ),
+        }
+    body: dict[str, Any] = {"text": clean, "threshold": _clamp(threshold, 0.0, 1.0, 0.5)}
+    if zero_retention_mode:
+        body["zero_retention_mode"] = True
+    submitted = await _request(api_key, "POST", "/text_detect", body)
+    uuid = _item(submitted).get("uuid")
+    result = (
+        await _poll(api_key, f"/text_detect/{uuid}", max_wait_seconds,
+                    ceiling=TEXT_WAIT_CEILING, ctx=ctx)
+        if uuid else submitted
+    )
+    return _text_summary(uuid, result, word_count)
+
+
+@action_mcp.tool()
+async def get_text_detection(uuid: str, ctx: Context, max_wait_seconds: int = 240) -> dict:
+    """Fetch a text detection by UUID, polling until it completes (bounded). Use
+    after detect_ai_text returned status 'processing' - typically a cold start."""
+    api_key = _api_key_from_request(ctx)
+    clean_uuid = (uuid or "").strip()
+    if not re.fullmatch(r"[0-9a-fA-F-]{8,40}", clean_uuid):
+        raise ValueError("uuid must be a Resemble text detection id.")
+    result = await _poll(api_key, f"/text_detect/{clean_uuid}", max_wait_seconds,
+                         ceiling=TEXT_WAIT_CEILING, ctx=ctx)
+    return _text_summary(clean_uuid, result)
 
 
 @action_mcp.tool()

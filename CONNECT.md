@@ -112,6 +112,7 @@ mcpServers:
 - Header: `Authorization: Bearer YOUR_RESEMBLE_API_KEY`
 
 ## Tools exposed
-`detect_deepfake` · `get_detection` · `analyze_media` · `ask_about_detection` ·
+`detect_deepfake` · `get_detection` · `detect_ai_text` · `get_text_detection` ·
+`analyze_media` · `ask_about_detection` ·
 `detect_watermark` · `apply_watermark` · `trace_audio_source` ·
 `list_detect_agents` · `run_detect_agent_investigation` · `get_detect_agent_run`
