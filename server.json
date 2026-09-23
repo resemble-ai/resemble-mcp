@@ -2,12 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.resemble-ai/resemble-mcp",
   "title": "Resemble AI",
-  "description": "Resemble AI: deepfake detection, AI-text detection, Detect Agents, media intelligence, watermarking.",
+  "description": "Resemble AI: deepfake, AI-text, and site agent detection, Detect Agents, intelligence, watermarks.",
   "repository": {
     "url": "https://github.com/resemble-ai/resemble-mcp",
     "source": "github"
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "remotes": [
     {
       "type": "streamable-http",

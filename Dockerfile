@@ -11,6 +11,7 @@ COPY server.py .
 COPY action_server.py .
 COPY docs/ ./docs/
 COPY openapi/ ./openapi/
+COPY web/ ./web/
 
 # Set environment variables
 ENV MCP_TRANSPORT=sse

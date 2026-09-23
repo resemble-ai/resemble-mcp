@@ -1,0 +1,529 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resemble for Agents</title>
+<meta name="description" content="Resemble for AI agents: connect to one MCP server for deepfake detection, AI-text detection, media intelligence, watermarking, and Agent Detection.">
+<link rel="icon" href="/static/logo-square-green.png">
+<link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
+<!-- Resemble design system tokens (design-system/colors_and_type.css), unmodified -->
+<link rel="stylesheet" href="/static/colors_and_type.css">
+<style>
+/* ---------- base (ui_kits/marketing-website/styles.css) ---------- */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { background: var(--bg-primary); color: var(--fg-primary); font-feature-settings: "ss01", "cv11"; }
+img { display: block; max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--brand-mint); outline-offset: 2px; box-shadow: var(--shadow-ring); }
+.container { max-width: var(--container-xl); margin: 0 auto; padding: 0 var(--space-8); }
+@media (max-width: 640px) { .container { padding: 0 var(--space-4); } }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; gap: var(--space-2); padding: 12px 20px; border-radius: var(--radius-md);
+  font-weight: var(--weight-semibold); font-size: 15px; line-height: 20px; border: 1px solid transparent; box-shadow: var(--shadow-xs);
+  text-decoration: none; transition: background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard); }
+.btn:hover { text-decoration: none; }
+.btn-primary { background: var(--brand-deep); color: #fff; }
+.btn-primary:hover { background: var(--success-800); }
+.btn-secondary { background: #fff; color: var(--brand-ink); border-color: var(--neutral-300); }
+.btn-secondary:hover { background: var(--neutral-50); }
+.btn-mint { background: var(--brand-mint); color: var(--success-900); }
+.btn-mint:hover { background: var(--brand-mint-soft); }
+.btn-ghost-dark { background: rgba(255,255,255,0.06); color: #fff; border-color: rgba(255,255,255,0.18); }
+.btn-ghost-dark:hover { background: rgba(255,255,255,0.10); }
+.btn-lg { padding: 14px 22px; font-size: 16px; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+
+/* pills + eyebrows */
+.pill { display: inline-flex; align-items: center; gap: var(--space-2); padding: 4px 12px; border-radius: var(--radius-full);
+  font-family: var(--font-mono); font-size: 12px; line-height: 16px; letter-spacing: var(--tracking-wide); text-transform: uppercase; border: 1px solid transparent; }
+.pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+.pill-mint { background: rgba(50,210,161,0.10); color: var(--brand-deep); border-color: rgba(50,210,161,0.30); }
+.pill-mint .dot, .pill-on-dark .dot { background: var(--brand-mint); box-shadow: 0 0 0 4px rgba(50,210,161,0.20); }
+.pill-on-dark { background: rgba(50,210,161,0.12); color: var(--brand-mint-pale); border-color: rgba(50,210,161,0.35); }
+.pill-info { background: var(--brand-stone); color: var(--neutral-700); border-color: var(--neutral-200); }
+.eyebrow { letter-spacing: 0.08em; }
+.eyebrow-on-dark { color: rgba(255,255,255,0.55); }
+
+/* section rhythm: paper / cream / stone / forest / ink, never gradients */
+section { padding: var(--space-24) 0; }
+section.cream { background: var(--brand-cream); }
+section.stone { background: var(--brand-stone); }
+section.dark { background: var(--brand-forest); color: var(--fg-on-dark); }
+@media (max-width: 640px) { section { padding: var(--space-16) 0; } }
+.head { display: flex; flex-direction: column; gap: var(--space-4); max-width: var(--paragraph-max); margin-bottom: var(--space-12); }
+h1, h2, h3 { text-wrap: balance; }
+.head h2 { font-size: clamp(32px, 4.4vw, var(--fs-display-lg)); line-height: 1.15; }
+.head p { font-size: var(--fs-text-lg); line-height: var(--lh-text-lg); }
+section.dark .head h2 { color: var(--fg-on-dark); }
+section.dark .head p { color: var(--fg-on-dark-mute); }
+
+/* cards + feature icon tiles */
+.card { background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-xl); box-shadow: var(--shadow-xs); padding: var(--space-6); }
+.card h3 { font-size: var(--fs-text-lg); line-height: var(--lh-text-lg); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); margin: var(--space-4) 0 var(--space-2); }
+.card p { font-size: var(--fs-text-sm); line-height: var(--lh-text-sm); }
+.tile { width: 44px; height: 44px; border-radius: var(--radius-lg); display: grid; place-items: center; flex: none; }
+.tile svg { width: 22px; height: 22px; }
+.t-success { background: var(--success-50); color: var(--success-700); }
+.t-forest { background: var(--brand-forest); color: var(--brand-mint); }
+.t-warning { background: var(--warning-50); color: var(--warning-700); }
+.t-stone { background: var(--brand-stone); color: var(--neutral-700); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--space-4); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 1024px) { .grid-4, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .grid-4, .grid-3 { grid-template-columns: minmax(0, 1fr); } }
+p code, td code, li code { font-size: 13px; line-height: inherit; color: var(--brand-deep); }
+
+/* ---------- nav: paper + blur, sits over the hero photo ---------- */
+.nav { position: sticky; top: 0; z-index: 50; background: rgba(251,251,250,0.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--neutral-200); }
+.nav .row { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: var(--space-4); }
+.nav img { height: 34px; }
+.nav .links { display: flex; align-items: center; gap: var(--space-6); font-size: var(--fs-text-sm); font-weight: var(--weight-medium); }
+.nav .links a:not(.btn) { color: var(--fg-secondary); }
+.nav .links a:not(.btn):hover { color: var(--fg-primary); text-decoration: none; }
+@media (max-width: 760px) { .nav .links a.opt { display: none; } }
+
+/* ---------- hero: light, photographic, cream veil ---------- */
+.hero { position: relative; overflow: hidden; isolation: isolate; padding: 72px 0 96px; }
+.hero .bg { position: absolute; inset: 0; z-index: -2; background: url("/static/hero-bg.jpg") center / cover; opacity: 0.62; filter: saturate(0.7); }
+.hero .veil { position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(251,251,250,0.55) 0%, rgba(251,251,250,0.85) 55%, rgba(251,251,250,1) 100%); }
+.hero .inner { display: flex; flex-direction: column; align-items: flex-start; gap: 28px; max-width: 880px; }
+.hero h1 { font-weight: var(--weight-regular); font-size: clamp(44px, 7vw, 80px); line-height: 1.0; letter-spacing: -0.03em; }
+.hero h1 em { font-style: italic; font-weight: var(--weight-medium); color: var(--brand-deep); }
+.hero .lede { font-size: var(--fs-text-xl); line-height: 1.5; max-width: 680px; }
+.hero .lede strong { color: var(--brand-ink); font-weight: var(--weight-semibold); }
+.cta { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.metrics { display: flex; align-items: center; gap: 28px; flex-wrap: wrap; padding-top: 28px; border-top: 1px solid var(--neutral-200); width: 100%; max-width: 720px; }
+.metric { display: flex; flex-direction: column; gap: 4px; }
+.metric b { font-family: var(--font-mono); font-weight: var(--weight-regular); font-size: 22px; letter-spacing: -0.01em; color: var(--brand-ink); }
+.metrics .div { width: 1px; height: 28px; background: var(--neutral-300); }
+@media (max-width: 640px) { .metrics .div { display: none; } .metrics { gap: 20px 32px; } }
+
+/* redirect notice: one line under the nav */
+.notice { background: var(--brand-stone); border-bottom: 1px solid var(--border-subtle); }
+.notice[hidden] { display: none; }
+.notice .row { display: flex; align-items: center; gap: var(--space-4); padding-top: var(--space-3); padding-bottom: var(--space-3); }
+.notice p { flex: 1; min-width: 0; font-size: var(--fs-text-sm); line-height: var(--lh-text-sm); }
+.notice b { color: var(--fg-primary); font-weight: var(--weight-semibold); }
+.notice .mono { font-family: var(--font-mono); font-size: 13px; font-weight: var(--weight-regular); }
+.notice .pill { background: var(--bg-card); flex: none; }
+.notice .pill svg { flex: none; }
+.notice .btn { flex: none; white-space: nowrap; }
+@media (max-width: 760px) {
+  .notice .row { flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
+  .notice p { flex-basis: 100%; order: 2; }
+  .notice .why { display: none; }
+  .notice .btn { order: 3; }
+}
+
+/* ---------- steps ---------- */
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-4); }
+.step { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: var(--space-8); padding: var(--space-8); }
+.step .n { display: flex; flex-direction: column; gap: var(--space-3); }
+.step .n b { font-family: var(--font-mono); font-weight: var(--weight-regular); font-size: var(--fs-display-sm); color: var(--brand-deep); letter-spacing: -0.01em; }
+.step h3 { margin: 0 0 var(--space-2); font-size: var(--fs-display-xs); line-height: var(--lh-display-xs); font-weight: var(--weight-medium); letter-spacing: var(--tracking-display); }
+.step p { max-width: var(--paragraph-max); margin-bottom: var(--space-3); }
+.step .note { font-size: var(--fs-text-sm); color: var(--fg-tertiary); }
+@media (max-width: 760px) { .step { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); padding: var(--space-6); } .step .n { flex-direction: row; align-items: center; } }
+
+/* console panel (dark product surface) */
+.console { background: var(--brand-ink); border: 1px solid var(--border-on-dark); border-radius: var(--radius-2xl); box-shadow: var(--shadow-2xl); overflow: hidden; margin-top: var(--space-4); }
+.console .chrome { display: flex; align-items: center; gap: var(--space-3); padding: 12px 16px; border-bottom: 1px solid var(--border-on-dark); }
+.console .dots { display: flex; gap: 6px; }
+.console .dots i { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+.console .crumb { font-family: var(--font-mono); font-size: 12px; color: var(--fg-on-dark-mute); letter-spacing: var(--tracking-mono); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 12px 0; }
+.tab { background: transparent; color: var(--fg-on-dark-mute); border: 1px solid transparent; border-radius: var(--radius-sm); padding: 6px 10px;
+  font: var(--weight-medium) 13px/18px var(--font-body); transition: background var(--dur-base) var(--ease-standard); }
+.tab:hover { background: rgba(255,255,255,0.06); }
+.tab[aria-selected="true"] { color: #fff; background: rgba(255,255,255,0.08); border-color: var(--border-on-dark); }
+.console .body { position: relative; }
+.console pre code { color: inherit; font-size: inherit; line-height: inherit; }
+.console pre { margin: 0; padding: 20px; overflow-x: auto; color: var(--brand-mint-pale); font-size: var(--fs-code-sm); line-height: var(--lh-code-sm); }
+.console .copy { position: absolute; top: 12px; right: 12px; }
+
+/* ---------- task table ---------- */
+.table-card { padding: 0; overflow: hidden; }
+.table-scroll { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td { text-align: left; vertical-align: top; padding: var(--space-4) var(--space-6); border-bottom: 1px solid var(--border-subtle); }
+th { font-family: var(--font-mono); font-size: 12px; font-weight: var(--weight-regular); letter-spacing: var(--tracking-wide); text-transform: uppercase; color: var(--fg-tertiary); background: var(--brand-cream); }
+td { font-size: var(--fs-text-sm); line-height: var(--lh-text-sm); color: var(--fg-secondary); }
+td:first-child { color: var(--fg-primary); font-weight: var(--weight-medium); width: 30%; }
+tr:last-child td { border-bottom: 0; }
+.new { margin-left: var(--space-2); vertical-align: 1px; font-size: 10px; padding: 1px 8px; }
+
+/* ---------- why you're here: two outcomes + offer ---------- */
+.outcomes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+@media (max-width: 760px) { .outcomes { grid-template-columns: minmax(0, 1fr); } }
+.outcome { display: flex; flex-direction: column; align-items: flex-start; padding: var(--space-8); }
+.outcome h3 { font-size: var(--fs-display-xs); line-height: var(--lh-display-xs); font-weight: var(--weight-medium); letter-spacing: var(--tracking-display); margin-top: var(--space-5); }
+.outcome p { font-size: var(--fs-text-md); line-height: var(--lh-text-md); }
+.outcome .path { margin-top: var(--space-6); padding-top: var(--space-4); border-top: 1px solid var(--border-subtle); width: 100%; display: flex; gap: var(--space-3); align-items: baseline; flex-wrap: wrap; }
+.outcome .path code { font-size: 14px; color: var(--fg-primary); }
+.outcome.is-you { border: 2px solid var(--brand-deep); box-shadow: var(--shadow-sm); }
+.outcome.is-you .path code { color: var(--brand-deep); }
+.offer { display: flex; align-items: center; gap: var(--space-6); margin-top: var(--space-4); background: var(--brand-cream); box-shadow: none; }
+.offer .text { flex: 1; min-width: 0; }
+.offer h3 { margin: 0 0 var(--space-1); }
+.offer .btn { flex: none; }
+@media (max-width: 760px) { .offer { flex-direction: column; align-items: flex-start; } }
+
+/* ---------- tool groups ---------- */
+.group .top { display: flex; justify-content: space-between; align-items: flex-start; }
+.group ul { list-style: none; margin: var(--space-4) 0 0; padding: var(--space-3) 0 0; display: grid; gap: 2px; border-top: 1px solid var(--border-subtle); }
+.group summary { cursor: pointer; list-style: none; padding: 6px 0; font-family: var(--font-mono); font-size: 13px; color: var(--brand-deep); display: flex; justify-content: space-between; gap: var(--space-2); overflow-wrap: anywhere; }
+.group summary::-webkit-details-marker { display: none; }
+.group summary::after { content: "+"; color: var(--fg-tertiary); }
+.group details[open] summary::after { content: "–"; }
+.group details div { font-size: var(--fs-text-xs); line-height: var(--lh-text-xs); color: var(--fg-secondary); padding: 0 0 var(--space-3); white-space: pre-line; }
+
+/* ---------- footer: ink ---------- */
+footer { background: var(--brand-ink); color: var(--fg-on-dark); padding: 72px 0 32px; }
+footer .top { display: grid; grid-template-columns: 1.1fr 2fr; gap: var(--space-12); padding-bottom: var(--space-12); }
+footer .wm { font-weight: var(--weight-bold); font-size: 24px; letter-spacing: 0.02em; color: var(--brand-mint); }
+footer .tag { font-size: 14px; line-height: 1.55; color: var(--fg-on-dark-mute); margin-top: var(--space-4); max-width: 320px; }
+footer .tag a { color: var(--brand-mint); }
+footer .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-6); }
+footer h5 { font-family: var(--font-mono); font-size: 11px; font-weight: var(--weight-regular); letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-on-dark-mute); margin: 0 0 var(--space-3); }
+footer .cols a { display: block; color: var(--fg-on-dark-soft); font-size: 14px; margin-bottom: 10px; }
+footer .bottom { border-top: 1px solid rgba(255,255,255,0.10); padding-top: var(--space-6); display: flex; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; color: var(--fg-on-dark-mute); }
+@media (max-width: 760px) { footer .top { grid-template-columns: minmax(0, 1fr); } }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="container row">
+    <a href="https://www.resemble.ai" aria-label="Resemble AI"><img src="/static/logo-wordmark.svg" alt="Resemble AI"></a>
+    <nav class="links">
+      <a href="#start">Start</a>
+      <a href="#tasks">Tasks</a>
+      <a class="opt" href="#rules">Rules</a>
+      <a class="opt" href="#tools">Tools</a>
+      <a class="btn btn-primary btn-sm" href="/llms.txt">llms.txt <span aria-hidden="true">→</span></a>
+    </nav>
+  </div>
+</header>
+
+<div class="notice" id="arrival" role="status" hidden>
+  <div class="container row">
+    <span class="pill pill-info"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>Redirected</span>
+    <p><b>You came from <span class="mono" id="from-host"></span>.</b> <span class="why">This is Resemble's entrance for agents — the same products, as tools.</span></p>
+    <a class="btn btn-secondary btn-sm" id="from-link" rel="nofollow">Return to <span id="from-path"></span> <span aria-hidden="true">→</span></a>
+  </div>
+</div>
+
+<main>
+  <section class="hero">
+    <div class="bg" aria-hidden="true"></div>
+    <div class="veil" aria-hidden="true"></div>
+    <div class="container">
+      <div class="inner">
+        <span class="pill pill-mint"><span class="dot"></span>For AI agents</span>
+        <h1>Hello, agent. This is Resemble, built <em>for you</em>.</h1>
+        <p class="lede">Skip the clicking. Every Resemble detection product is a tool on one MCP server. Connect with your user's API key, then call the tools directly.</p>
+        <div class="cta">
+          <a class="btn btn-primary btn-lg" href="#start">Connect in 3 steps <span aria-hidden="true">→</span></a>
+          <a class="btn btn-secondary btn-lg" href="/tools.json">Tool manifest</a>
+        </div>
+        <div class="metrics">
+          <div class="metric"><b id="tool-count">18</b><span class="eyebrow">Tools</span></div>
+          <span class="div" aria-hidden="true"></span>
+          <div class="metric"><b>3</b><span class="eyebrow">Steps to first call</span></div>
+          <span class="div" aria-hidden="true"></span>
+          <div class="metric"><b>0</b><span class="eyebrow">Keys stored</span></div>
+          <span class="div" aria-hidden="true"></span>
+          <div class="metric"><b>/mcp</b><span class="eyebrow">Streamable HTTP</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cream" id="start">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 01 — Start</span>
+        <h2>Three steps to your first call.</h2>
+        <p>Follow these in order. Each one says what to do, and what to tell your user.</p>
+      </div>
+      <ol class="steps">
+        <li class="card step">
+          <div class="n"><b>01</b><span class="eyebrow">Key</span></div>
+          <div>
+            <h3>Get an API key from your user.</h3>
+            <p>Every call runs on your user's own Resemble account. Ask them to create a key at <a href="https://app.resemble.ai/account/api">app.resemble.ai/account/api</a>, or check whether it's already set as <code>RESEMBLE_API_KEY</code>.</p>
+            <p class="note">Don't ask for their password, and don't create an account for them without asking. Keep the key in an environment variable — never print it, and never put it in a web page.</p>
+          </div>
+        </li>
+        <li class="card step">
+          <div class="n"><b>02</b><span class="eyebrow">Connect</span></div>
+          <div>
+            <h3>Connect to the MCP server.</h3>
+            <p>Endpoint <code>https://mcp.resemble.ai/mcp</code>, Streamable HTTP, with the header <code>Authorization: Bearer &lt;RESEMBLE_API_KEY&gt;</code>. If you can add MCP servers yourself, use the config for your client. If you can't, give it to your user to paste.</p>
+            <div class="console">
+              <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="crumb">mcp.resemble.ai / connect</span></div>
+              <div class="tabs" role="tablist" id="tabs"></div>
+              <div class="body"><button class="btn btn-ghost-dark btn-sm copy" id="copy-config">Copy</button><pre><code id="config"></code></pre></div>
+            </div>
+          </div>
+        </li>
+        <li class="card step">
+          <div class="n"><b>03</b><span class="eyebrow">Call</span></div>
+          <div>
+            <h3>Pick the tool for the task.</h3>
+            <p>Match what your user asked for to a row in <a href="#tasks">the task table</a>. Every tool's full description — the text you'll see after connecting — is in <a href="#tools">the tool list</a>.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="tasks">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 02 — Tasks</span>
+        <h2>What your user wants, and what to call.</h2>
+        <p>Arguments marked with <code>*</code> are required.</p>
+      </div>
+      <div class="card table-card"><div class="table-scroll">
+        <table>
+          <thead><tr><th>Your user wants to…</th><th>Call</th><th>Then</th></tr></thead>
+          <tbody>
+            <tr><td>Check if audio, an image, or a video is a deepfake</td><td><code>detect_deepfake(url*)</code></td><td>Report <code>label</code> with its <code>score</code>. Still processing? Call <code>get_detection(uuid*)</code>.</td></tr>
+            <tr><td>Know which AI platform made fake audio</td><td><code>detect_deepfake(url*, audio_source_tracing=true)</code></td><td>Or <code>trace_audio_source(uuid*)</code> on an existing detection.</td></tr>
+            <tr><td>Check if writing was made by AI</td><td><code>detect_ai_text(text*)</code></td><td>Needs 25+ words. Report <code>prediction</code> with its <code>confidence</code>. The first call after idle can take minutes.</td></tr>
+            <tr><td>Get a transcript, speakers, or emotion from media</td><td><code>analyze_media(url*)</code></td><td>Follow up with <code>ask_about_detection(detect_uuid*, query*)</code>.</td></tr>
+            <tr><td>Check or add an invisible watermark</td><td><code>detect_watermark(url*)</code><br><code>apply_watermark(url*)</code></td><td>Detect first if you only need to know whether media is watermarked.</td></tr>
+            <tr><td>Investigate a claim, ID, document, or news media</td><td><code>list_detect_agents()</code><br><code>run_detect_agent_investigation(preset_id*, url*)</code></td><td>Uses a run of the team's allowance. Base any authenticity claim on its <code>label</code> and <code>score</code>.</td></tr>
+            <tr><td>Find out if their website's visitors are people or AI agents<span class="pill pill-mint new">New</span></td><td><code>agent_detection_create_site(domain*)</code></td><td>Put the returned <code>snippet</code> in the site's <code>&lt;head&gt;</code>. Only the <code>pk_live_</code> key goes in the page.</td></tr>
+            <tr><td>See how much of their traffic comes from agents<span class="pill pill-mint new">New</span></td><td><code>agent_detection_get_analytics()</code></td><td>Drill in with <code>agent_detection_list_sessions()</code> and <code>agent_detection_get_session(session_id*)</code>.</td></tr>
+            <tr><td>Anything else on Resemble — voices, text to speech</td><td>Docs MCP · <code>mcp.resemble.ai/sse</code></td><td>Look up the REST endpoint there, then call <code>app.resemble.ai/api/v2</code> with the same key.</td></tr>
+          </tbody>
+        </table>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="stone" id="rules">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 03 — Rules</span>
+        <h2>Your user will trust what you say is real.</h2>
+        <p>Follow these every time you report a result.</p>
+      </div>
+      <div class="grid-4">
+        <article class="card">
+          <div class="tile t-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></div>
+          <h3>Evidence, never guesses.</h3>
+          <p>Never call media real or fake, or text AI-written, from how it looks or reads. Only a completed detection counts. If it failed, say so.</p>
+        </article>
+        <article class="card">
+          <div class="tile t-forest"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg></div>
+          <h3>Always give the score.</h3>
+          <p>Report the label with its score, or the prediction with its confidence. A 0.51 is not a 0.95 — and detection is probabilistic.</p>
+        </article>
+        <article class="card">
+          <div class="tile t-warning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg></div>
+          <h3>Keep the key secret.</h3>
+          <p>The API key stays on the server side. A web page only ever gets the site's publishable <code>pk_live_</code> key.</p>
+        </article>
+        <article class="card">
+          <div class="tile t-stone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><path d="M8 16h.01M16 16h.01"/></svg></div>
+          <h3>Two products say "agent".</h3>
+          <p><b>Detect Agents</b> investigate media. <b>Agent Detection</b> tells a website whether its visitors are people or agents — like you.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="why">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 04 — Why this page exists</span>
+        <h2>Agents get their own front door.</h2>
+        <p>People and agents both come to Resemble, and they need different things. People get pages to read. Agents get tools to call. We built this entrance so you can do your job well — Agent Detection, running on our own site, shows each visitor the right one.</p>
+      </div>
+      <div class="outcomes">
+        <article class="card outcome">
+          <span class="pill pill-info"><span class="dot" style="background:var(--neutral-500)"></span>For people</span>
+          <h3>Pages built for reading and clicking.</h3>
+          <p>Product pages, pricing, and demos — designed for someone with a mouse, trackpad, or keyboard.</p>
+          <div class="path"><span class="eyebrow">Entrance</span><code>www.resemble.ai</code></div>
+        </article>
+        <article class="card outcome is-you">
+          <span class="pill pill-mint"><span class="dot"></span>For agents — you</span>
+          <h3>Tools built for doing the work.</h3>
+          <p>Every product as a tool you can call, with instructions written for you. Both entrances stay open — you're always free to use the pages too.</p>
+          <div class="path"><span class="eyebrow">Entrance</span><code>mcp.resemble.ai</code></div>
+        </article>
+      </div>
+      <article class="card offer">
+        <div class="tile t-success"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></div>
+        <div class="text">
+          <h3>Your user can do the same on their website.</h3>
+          <p>One call to <code>agent_detection_create_site</code> sets it up. They'll see which visitors are people and which are agents, which pages agents use, and where they get stuck.</p>
+        </div>
+        <a class="btn btn-primary" href="#tasks">See the setup call <span aria-hidden="true">→</span></a>
+      </article>
+    </div>
+  </section>
+
+  <section class="cream" id="tools">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 05 — Tools</span>
+        <h2>Every tool, exactly as you'll see it.</h2>
+        <p>Read live from the running server. Open a tool to read its full description.</p>
+      </div>
+      <div class="grid-3" id="groups"></div>
+    </div>
+  </section>
+
+  <section id="machine">
+    <div class="container">
+      <div class="head">
+        <span class="eyebrow">Section · 06 — Machine-readable</span>
+        <h2>Skip the HTML.</h2>
+        <p>Everything on this page, in the formats agents read directly.</p>
+      </div>
+      <div class="grid-4">
+        <article class="card"><span class="pill pill-info">Markdown</span><h3><a href="/llms.txt">/llms.txt</a></h3><p>This page as Markdown. <code>GET /</code> with <code>Accept: text/markdown</code> returns it too.</p></article>
+        <article class="card"><span class="pill pill-info">JSON</span><h3><a href="/tools.json">/tools.json</a></h3><p>Every tool with its input schema.</p></article>
+        <article class="card"><span class="pill pill-info">WebMCP</span><h3>navigator.modelContext</h3><p>In a supporting browser, this page registers <code>get_resemble_mcp_connection</code>.</p></article>
+        <article class="card"><span class="pill pill-info">SSE</span><h3>/sse</h3><p>The docs MCP: search Resemble's docs and API reference. No key needed.</p></article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="top">
+      <div>
+        <span class="wm">RESEMBLE.AI</span>
+        <p class="tag">Generate, verify, and detect Generative-AI media. Are you a person? <a href="https://www.resemble.ai">Go to resemble.ai →</a></p>
+      </div>
+      <div class="cols">
+        <div><h5>For agents</h5><a href="/llms.txt">llms.txt</a><a href="/tools.json">Tool manifest</a><a href="#start">Connect</a></div>
+        <div><h5>Learn</h5><a href="https://docs.resemble.ai">Docs</a><a href="https://docs.resemble.ai/detect/agent-detection">Agent Detection</a><a href="https://github.com/resemble-ai/resemble-mcp">GitHub</a></div>
+        <div><h5>Company</h5><a href="https://www.resemble.ai">resemble.ai</a><a href="https://app.resemble.ai">Sign in</a><a href="https://status.resemble.ai">Status</a></div>
+      </div>
+    </div>
+    <div class="bottom"><span>© RESEMBLE.AI · MCP.RESEMBLE.AI</span><span>STREAMABLE HTTP · BYO KEY · ZERO STORAGE</span></div>
+  </div>
+</footer>
+
+<script>
+(() => {
+  // Resemble's sites send detected agents here as /?from=<original URL>.
+  // Only a Resemble URL is shown or linked, so this can't become an open redirect.
+  try {
+    const from = new URLSearchParams(location.search).get("from");
+    if (from) {
+      const u = new URL(from);
+      if (u.protocol === "https:" && (u.hostname === "resemble.ai" || u.hostname.endsWith(".resemble.ai"))) {
+        document.getElementById("from-host").textContent = u.hostname + u.pathname;
+        document.getElementById("from-path").textContent = u.pathname === "/" ? u.hostname : u.pathname;
+        u.searchParams.set("agent_stay", "1");  // the redirect skips visits that carry this
+        document.getElementById("from-link").href = u.href;
+        document.getElementById("arrival").hidden = false;
+      }
+    }
+  } catch (e) {}
+
+  const KEY = "YOUR_RESEMBLE_API_KEY";
+  const URL_ = "https://mcp.resemble.ai/mcp";
+  const json = (o) => JSON.stringify(o, null, 2);
+  const CLIENTS = [
+    ["Claude Code", `claude mcp add --transport http resemble ${URL_} \\\n  --header "Authorization: Bearer ${KEY}"`],
+    ["Claude Desktop", json({ mcpServers: { resemble: { type: "http", url: URL_, headers: { Authorization: `Bearer ${KEY}` } } } })],
+    ["Cursor", json({ mcpServers: { resemble: { url: URL_, headers: { Authorization: `Bearer ${KEY}` } } } })],
+    ["VS Code", json({ servers: { resemble: { type: "http", url: URL_, headers: { Authorization: `Bearer ${KEY}` } } } })],
+    ["Codex CLI", `[mcp_servers.resemble]\nurl = "${URL_}"\nhttp_headers = { "Authorization" = "Bearer ${KEY}" }`],
+    ["Gemini CLI", json({ mcpServers: { resemble: { httpUrl: URL_, headers: { Authorization: `Bearer ${KEY}` } } } })],
+    ["Windsurf", json({ mcpServers: { resemble: { serverUrl: URL_, headers: { Authorization: `Bearer ${KEY}` } } } })],
+  ];
+  const tabs = document.getElementById("tabs");
+  const config = document.getElementById("config");
+  function select(i) {
+    [...tabs.children].forEach((t, j) => t.setAttribute("aria-selected", String(i === j)));
+    config.textContent = CLIENTS[i][1];
+  }
+  CLIENTS.forEach(([name], i) => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.setAttribute("role", "tab"); b.textContent = name; b.onclick = () => select(i);
+    tabs.appendChild(b);
+  });
+  select(0);
+  document.getElementById("copy-config").onclick = (e) => {
+    const btn = e.currentTarget;
+    navigator.clipboard.writeText(config.textContent).then(() => {
+      btn.textContent = "Copied"; setTimeout(() => (btn.textContent = "Copy"), 1400);
+    }).catch(() => {});
+  };
+
+  // Tool groups, rendered from the live manifest so they can't drift from /mcp.
+  const ICON = {
+    detect: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    text: '<path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>',
+    intel: '<path d="M3 12h2M7 8v8M11 5v14M15 9v6M19 11v2"/>',
+    mark: '<path d="M12 2.7 5.6 9.1a9 9 0 1 0 12.8 0z"/>',
+    agents: '<path d="M9 11V6a3 3 0 0 1 6 0v5"/><rect x="4" y="11" width="16" height="10" rx="2"/>',
+    visitors: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+    more: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+  };
+  const GROUPS = [
+    { title: "Deepfake detection", tone: "t-forest", icon: "detect", blurb: "Check audio, images, and video for AI generation or manipulation.",
+      match: (n) => ["detect_deepfake", "get_detection", "trace_audio_source"].includes(n) },
+    { title: "AI text detection", tone: "t-success", icon: "text", blurb: "Check whether essays, emails, posts, or reviews were written by AI.",
+      match: (n) => n.includes("text_detection") || n === "detect_ai_text" },
+    { title: "Media intelligence", tone: "t-stone", icon: "intel", blurb: "Transcripts, speakers, emotion, and follow-up questions.",
+      match: (n) => ["analyze_media", "ask_about_detection"].includes(n) },
+    { title: "Watermarking", tone: "t-success", icon: "mark", blurb: "Apply and detect invisible watermarks.", match: (n) => n.includes("watermark") },
+    { title: "Detect Agents", tone: "t-warning", icon: "agents", blurb: "Managed investigations of claims, IDs, documents, and news.",
+      match: (n) => n.includes("detect_agent") },
+    { title: "Agent Detection", tone: "t-forest", icon: "visitors", isNew: true, blurb: "Tell people from AI agents on a website, and read who's visiting.",
+      match: (n) => n.startsWith("agent_detection_") },
+  ];
+  const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  fetch("/tools.json").then((r) => r.json()).then(({ tools }) => {
+    document.getElementById("tool-count").textContent = tools.length;
+    const box = document.getElementById("groups");
+    const used = new Set();
+    const render = (g, list) => {
+      if (!list.length) return;
+      const el = document.createElement("article");
+      el.className = "card group";
+      el.innerHTML = `<div class="top"><div class="tile ${g.tone}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${ICON[g.icon]}</svg></div>${
+        g.isNew ? '<span class="pill pill-mint">New</span>' : `<span class="eyebrow">${list.length} tools</span>`}</div>
+        <h3>${esc(g.title)}</h3><p>${esc(g.blurb)}</p><ul>${
+        list.map((t) => `<li><details><summary>${esc(t.name)}</summary><div>${esc((t.description || "").trim())}</div></details></li>`).join("")}</ul>`;
+      box.appendChild(el);
+    };
+    GROUPS.forEach((g) => { const list = tools.filter((t) => g.match(t.name)); list.forEach((t) => used.add(t.name)); render(g, list); });
+    render({ title: "More", tone: "t-stone", icon: "more", blurb: "Other tools on this server." }, tools.filter((t) => !used.has(t.name)));
+  }).catch(() => {});
+
+  // WebMCP: a browser agent on this page can ask how to connect, without scraping it.
+  try {
+    if (navigator.modelContext && navigator.modelContext.registerTool) {
+      navigator.modelContext.registerTool({
+        name: "get_resemble_mcp_connection",
+        description: "How to connect to the Resemble AI MCP server: endpoint, transport, auth header, and tool list URL.",
+        inputSchema: { type: "object", properties: {} },
+        execute: async () => ({ content: [{ type: "text", text: JSON.stringify({
+          endpoint: URL_, transport: "streamable-http", auth: "Authorization: Bearer <RESEMBLE_API_KEY>",
+          docs_endpoint: "https://mcp.resemble.ai/sse", tools: location.origin + "/tools.json", llms_txt: location.origin + "/llms.txt",
+        }) }] }),
+      });
+    }
+  } catch (e) {}
+})();
+</script>
+</body>
+</html>

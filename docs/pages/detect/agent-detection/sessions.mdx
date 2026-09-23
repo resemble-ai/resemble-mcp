@@ -1,0 +1,103 @@
+---
+title: Sessions and Analytics
+slug: /detect/agent-detection/sessions
+---
+
+Read your visits and traffic totals from your server. These endpoints use your Resemble API key, so never call them from a browser. Results are scoped to your team.
+
+## Filters
+
+`GET /porter/sessions` and `GET /porter/analytics` accept the same optional query parameters:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `site_id` | integer | Only visits to this integration. |
+| `settled` | string | Only visits with this verdict: `human` or `agent`. |
+| `page_path` | string | Only visits to this page path. |
+| `from` | string | ISO 8601 start time. |
+| `to` | string | ISO 8601 end time. |
+| `q` | string | Free-text search. |
+
+## List sessions
+
+`GET https://app.resemble.ai/api/v2/porter/sessions`
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `page` | integer | No | Page number. Defaults to 1. |
+| `per_page` | integer | No | Results per page. Defaults to 25, maximum 100. |
+
+```bash
+curl --request GET 'https://app.resemble.ai/api/v2/porter/sessions?settled=agent&per_page=25' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": 1024,
+      "sid": "3f9c0e1a7b2d4c6e8f0a1b2c",
+      "site_id": 12,
+      "page_path": "/signup",
+      "referrer": "https://www.google.com/",
+      "first_seen_at": "2026-09-23T17:02:11Z",
+      "last_seen_at": "2026-09-23T17:02:48Z",
+      "duration_s": 37.0,
+      "p_person": 0.03,
+      "visitor_class": "computer_use_agent",
+      "action": "gate",
+      "settled": "agent",
+      "settled_at": "2026-09-23T17:02:40Z",
+      "user_agent": "Mozilla/5.0 ...",
+      "created_at": "2026-09-23T17:02:11Z"
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "per_page": 25,
+  "pages": 1
+}
+```
+
+## Get a session
+
+`GET https://app.resemble.ai/api/v2/porter/sessions/{id}`
+
+Returns one visit, with the same fields as the list response.
+
+## Get analytics
+
+`GET https://app.resemble.ai/api/v2/porter/analytics`
+
+```bash
+curl --request GET 'https://app.resemble.ai/api/v2/porter/analytics?from=2026-09-01T00:00:00Z' \
+  -H 'Authorization: Bearer YOUR_API_TOKEN'
+```
+
+```json
+{
+  "success": true,
+  "totals": {
+    "visits": 5210,
+    "settled": 4980,
+    "unsettled": 230,
+    "agents": 612,
+    "people": 4368,
+    "agent_share": 0.1229,
+    "gated": 598
+  },
+  "by_class": {
+    "human": 4368,
+    "computer_use_agent": 401,
+    "browser_automation": 187,
+    "scripted_client": 24
+  },
+  "by_page": [],
+  "by_day": [],
+  "by_network": []
+}
+```
+
+`agent_share` is agents divided by decided visits, or `null` when no visit has a verdict yet.

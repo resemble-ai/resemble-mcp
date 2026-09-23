@@ -1,0 +1,142 @@
+---
+title: Agent Detection
+slug: /detect/agent-detection
+---
+
+Agent Detection tells you who is really visiting your website: a person, or an AI agent acting for one.
+
+More and more of your visitors are AI assistants browsing on someone's behalf. They compare prices, fill out forms, book appointments, and buy things. Most of that traffic is welcome, because behind each agent is a real customer. The problem is that you can't see it. Agents look like people in your analytics, and a helpful assistant looks the same as one that is scraping your content or abusing your signup form.
+
+Agent Detection is not about blocking agents. It shows you who your visitors are, so you can decide how to treat each one.
+
+## Why it matters
+
+<CardGroup cols={2}>
+  <Card title="Know who your visitors are" icon="fa-solid fa-eye">
+    Every visit is labeled as a person or an agent, along with the kind of agent. Your funnels, conversion rates, and dashboards reflect real people again, and agent traffic becomes something you can measure instead of noise.
+  </Card>
+  <Card title="Welcome the agents that help you" icon="fa-solid fa-handshake">
+    See how much of your traffic and revenue comes through agents, which pages they use, and where they give up. Use that data to make your site easier for agents to use, for example by offering an API or structured data where they get stuck.
+  </Card>
+  <Card title="Stop the ones that don't" icon="fa-solid fa-shield-halved">
+    Some agents are there to cause harm: fake signups, credential stuffing, card testing, scalping, or scraping. Challenge or block agents on the flows where only a person should be, such as signup, checkout, and one-per-person offers.
+  </Card>
+  <Card title="Give each visitor the right path" icon="fa-solid fa-route">
+    Send people to your UI and send agents to a path built for them, such as an API or tool endpoint. Agents finish their task faster, and your pages stay built for people.
+  </Card>
+</CardGroup>
+
+You decide what happens with each verdict. Agent Detection only tells your site who is visiting. It never blocks anyone by itself.
+
+## How it tells the difference
+
+Agent Detection judges a visitor by how they move, not by what they claim to be. A person has a hand on a mouse, trackpad, or keyboard, and software does not. Agent Detection measures that difference and gives each visit one verdict. You add one script tag to your site, and it tells your page the verdict so the page can act on it. For the details, see [How it works](#how-it-works).
+
+## Quickstart
+
+<Steps>
+
+### Create an integration
+
+In the [Resemble app](https://app.resemble.ai), open **Agent Detection** in the sidebar and create an integration for your domain. Each integration gets a **publishable key** (`pk_live_...`) and a snippet you can paste.
+
+The publishable key only works from the domains listed on the integration, and it can only send telemetry for that site. That makes it safe to put in a public web page.
+
+<Warning>
+Never put a Resemble API key in a web page. The telemetry endpoint rejects API keys and only accepts a publishable key.
+</Warning>
+
+### Add the script tag
+
+Paste the snippet from the integration page into the `<head>` of every page you want to cover:
+
+```html
+<script
+  async
+  src="SDK_URL_FROM_YOUR_INTEGRATION"
+  data-porter-key="pk_live_..."
+  data-porter-endpoint="https://app.resemble.ai/api/v2/porter/telemetry"
+></script>
+```
+
+The script has no dependencies and does not change your page. It starts collecting as soon as it loads.
+
+### Act on the verdict
+
+When a visit reaches a verdict, the SDK tells your page. You can listen for a DOM event or register a callback:
+
+```javascript
+// A DOM event
+window.addEventListener('porter:verdict', (e) => {
+  const { verdict, kind, sessionId } = e.detail
+  if (verdict === 'agent') {
+    // For example, show a challenge or point the agent at your API
+  }
+})
+
+// A callback. It still fires if the verdict arrived before you registered it.
+Porter.onVerdict(({ verdict, kind, sessionId }) => {
+  analytics.track('visitor_classified', { verdict, kind })
+})
+```
+
+</Steps>
+
+## The verdict
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `verdict` | string | `human`, `agent`, or `review`. |
+| `kind` | string | The most likely visitor class. See [Visitor classes](#visitor-classes). |
+| `sessionId` | string | The visit's session id. Use it to find the visit in the dashboard or through the [Sessions API](/detect/agent-detection/sessions). |
+
+A verdict is final. Once a visit has one, the SDK stops collecting for that visit.
+
+### Visitor classes
+
+| Class | Meaning |
+| --- | --- |
+| `human` | A person is using the page. |
+| `computer_use_agent` | An AI agent operating a browser by looking at the screen and sending clicks and keystrokes. |
+| `browser_automation` | A browser driven by an automation framework, such as Playwright, Puppeteer, or Selenium. |
+| `scripted_client` | A script sending requests or events directly, without a real browser session behind them. |
+
+## How it works
+
+The SDK collects signals that show whether a hand is on the controls:
+
+- **Pointer movement**: jitter, heading changes, and the timing between movements.
+- **Clicks**: how long the pointer hovers before a click, how far from an element's center it lands, and whether a real input device produced it.
+- **Typing**: the variation between keystrokes and how long keys are held down.
+- **Scrolling**: the number of wheel events in each gesture and how they slow down.
+- **Environment**: request headers, browser automation flags, and [Web Bot Auth](https://datatracker.ietf.org/wg/webbotauth/about/) signatures from agents that identify themselves.
+
+Resemble combines these into a probability that a person is present, plus a visitor class. It waits until there is enough interaction to judge. A visit that ends without enough evidence does not get a verdict.
+
+## Privacy
+
+- Keystrokes are recorded as a category only (letter, digit, backspace, and so on). The key that was pressed is never recorded, and neither is typed text or page content.
+- Visitor IP addresses are hashed before they are stored. The raw IP is never saved.
+- Raw event streams are kept only for visits classed as agents and for a sample of the rest. They expire after the integration's retention period.
+
+<Note>
+Agent Detection is advisory. The signals come from the visitor's browser, so a determined attacker can fake them. Use the verdict alongside your existing security controls, not in place of them.
+</Note>
+
+## Pricing
+
+Each team gets **10,000 decided visits a day for free**, counted per UTC day. After that, each decided visit is billed at the **Agent Detection Visit** rate. A visit is billed once, however many times the page sends telemetry. A visit that never reaches a verdict is never billed.
+
+## Endpoints
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/porter/sessions` | API key | [List visits](/detect/agent-detection/sessions) |
+| `GET` | `/porter/sessions/{id}` | API key | [Get a visit](/detect/agent-detection/sessions#get-a-session) and the evidence behind its verdict |
+| `GET` | `/porter/analytics` | API key | [Get totals](/detect/agent-detection/sessions#get-analytics) for your traffic |
+| `GET` | `/porter/sites` | API key | [List integrations](/detect/agent-detection/integrations) |
+| `POST` | `/porter/sites` | API key | [Create an integration](/detect/agent-detection/integrations) |
+| `PATCH` | `/porter/sites/{id}` | API key | [Update an integration](/detect/agent-detection/integrations) |
+| `POST` | `/porter/sites/{id}/rotate_key` | API key | [Rotate a publishable key](/detect/agent-detection/integrations) |
+
+All paths are relative to `https://app.resemble.ai/api/v2`.
