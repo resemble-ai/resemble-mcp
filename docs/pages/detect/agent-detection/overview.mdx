@@ -54,8 +54,8 @@ Paste the snippet from the integration page into the `<head>` of every page you 
 <script
   async
   src="SDK_URL_FROM_YOUR_INTEGRATION"
-  data-porter-key="pk_live_..."
-  data-porter-endpoint="https://app.resemble.ai/api/v2/porter/telemetry"
+  data-resemble-key="pk_live_..."
+  data-resemble-endpoint="https://app.resemble.ai/api/v2/agent_detection/telemetry"
 ></script>
 ```
 
@@ -67,7 +67,7 @@ When a visit reaches a verdict, the SDK tells your page. You can listen for a DO
 
 ```javascript
 // A DOM event
-window.addEventListener('porter:verdict', (e) => {
+window.addEventListener('resemble:verdict', (e) => {
   const { verdict, kind, sessionId } = e.detail
   if (verdict === 'agent') {
     // For example, show a challenge or point the agent at your API
@@ -75,7 +75,7 @@ window.addEventListener('porter:verdict', (e) => {
 })
 
 // A callback. It still fires if the verdict arrived before you registered it.
-Porter.onVerdict(({ verdict, kind, sessionId }) => {
+ResembleAgentDetection.onVerdict(({ verdict, kind, sessionId }) => {
   analytics.track('visitor_classified', { verdict, kind })
 })
 ```
@@ -131,12 +131,12 @@ Each team gets **10,000 decided visits a day for free**, counted per UTC day. Af
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/porter/sessions` | API key | [List visits](/detect/agent-detection/sessions) |
-| `GET` | `/porter/sessions/{id}` | API key | [Get a visit](/detect/agent-detection/sessions#get-a-session) and the evidence behind its verdict |
-| `GET` | `/porter/analytics` | API key | [Get totals](/detect/agent-detection/sessions#get-analytics) for your traffic |
-| `GET` | `/porter/sites` | API key | [List integrations](/detect/agent-detection/integrations) |
-| `POST` | `/porter/sites` | API key | [Create an integration](/detect/agent-detection/integrations) |
-| `PATCH` | `/porter/sites/{id}` | API key | [Update an integration](/detect/agent-detection/integrations) |
-| `POST` | `/porter/sites/{id}/rotate_key` | API key | [Rotate a publishable key](/detect/agent-detection/integrations) |
+| `GET` | `/agent_detection/sessions` | API key | [List visits](/detect/agent-detection/sessions) |
+| `GET` | `/agent_detection/sessions/{id}` | API key | [Get a visit](/detect/agent-detection/sessions#get-a-session) and the evidence behind its verdict |
+| `GET` | `/agent_detection/analytics` | API key | [Get totals](/detect/agent-detection/sessions#get-analytics) for your traffic |
+| `GET` | `/agent_detection/sites` | API key | [List integrations](/detect/agent-detection/integrations) |
+| `POST` | `/agent_detection/sites` | API key | [Create an integration](/detect/agent-detection/integrations) |
+| `PATCH` | `/agent_detection/sites/{id}` | API key | [Update an integration](/detect/agent-detection/integrations) |
+| `POST` | `/agent_detection/sites/{id}/rotate_key` | API key | [Rotate a publishable key](/detect/agent-detection/integrations) |
 
 All paths are relative to `https://app.resemble.ai/api/v2`.

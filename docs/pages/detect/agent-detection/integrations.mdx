@@ -7,18 +7,18 @@ An integration is one website. It holds the domains the publishable key works on
 
 | Method | Path | Purpose |
 | --- | --- | --- |
-| `GET` | `/porter/sites` | List your integrations. |
-| `POST` | `/porter/sites` | Create one. Body: `domain` (required), `name`. |
-| `GET` | `/porter/sites/{id}` | Get one, including its publishable key and snippet. |
-| `PATCH` | `/porter/sites/{id}` | Update `name`, or replace the list of allowed `domains`. |
-| `POST` | `/porter/sites/{id}/rotate_key` | Issue a new publishable key. |
+| `GET` | `/agent_detection/sites` | List your integrations. |
+| `POST` | `/agent_detection/sites` | Create one. Body: `domain` (required), `name`. |
+| `GET` | `/agent_detection/sites/{id}` | Get one, including its publishable key and snippet. |
+| `PATCH` | `/agent_detection/sites/{id}` | Update `name`, or replace the list of allowed `domains`. |
+| `POST` | `/agent_detection/sites/{id}/rotate_key` | Issue a new publishable key. |
 
 All paths are relative to `https://app.resemble.ai/api/v2`.
 
 ## Create an integration
 
 ```bash
-curl --request POST 'https://app.resemble.ai/api/v2/porter/sites' \
+curl --request POST 'https://app.resemble.ai/api/v2/agent_detection/sites' \
   -H 'Authorization: Bearer YOUR_API_TOKEN' \
   -H 'Content-Type: application/json' \
   -d '{ "domain": "example.com", "name": "Example" }'
@@ -33,7 +33,7 @@ curl --request POST 'https://app.resemble.ai/api/v2/porter/sites' \
     "domains": ["example.com"],
     "active": true,
     "publishable_key": "pk_live_...",
-    "snippet": "<script async src=\"...\" data-porter-key=\"pk_live_...\" data-porter-endpoint=\"https://app.resemble.ai/api/v2/porter/telemetry\"></script>",
+    "snippet": "<script async src=\"...\" data-resemble-key=\"pk_live_...\" data-resemble-endpoint=\"https://app.resemble.ai/api/v2/agent_detection/telemetry\"></script>",
     "created_at": "2026-09-23T17:00:00Z"
   }
 }

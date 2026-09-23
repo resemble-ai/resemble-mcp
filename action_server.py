@@ -20,6 +20,7 @@ Security model — BYO key, zero storage:
 """
 
 import ipaddress
+import os
 import json
 import re
 from typing import Any, Optional
@@ -30,7 +31,8 @@ import httpx
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
 
-RESEMBLE_API_BASE = "https://app.resemble.ai/api/v2"
+# Overridable so the server can be pointed at a staging deployment for testing.
+RESEMBLE_API_BASE = os.environ.get("RESEMBLE_API_BASE", "https://app.resemble.ai/api/v2").rstrip("/")
 TERMINAL_STATUSES = {"completed", "failed", "error", "cancelled", "success"}
 MAX_WAIT_CEILING = 180  # hard cap on server-side polling, seconds
 UPSTREAM_TIMEOUT = httpx.Timeout(connect=10.0, read=60.0, write=30.0, pool=10.0)
@@ -647,7 +649,7 @@ async def get_detect_agent_run(preset_id: str, run_id: str, ctx: Context) -> dic
 
 
 # --------------------------------------------------------------------------- #
-# Agent Detection (Porter): is a website visitor a person or an AI agent?
+# Agent Detection (codename Porter): is a website visitor a person or an AI agent?
 #
 # Not to be confused with Detect Agents above. These tools manage the site
 # integrations (the publishable key + snippet a website embeds) and read the
@@ -660,7 +662,7 @@ _SETTLED_VALUES = {"human", "agent"}
 _MAX_INLINE_EVENTS = 200
 
 
-def _porter_filters(site_id: Optional[int], settled: str, page_path: str,
+def _agent_detection_filters(site_id: Optional[int], settled: str, page_path: str,
                     since: str, until: str, search: str) -> dict:
     params: dict = {}
     if site_id:
@@ -676,7 +678,7 @@ def _porter_filters(site_id: Optional[int], settled: str, page_path: str,
     return params
 
 
-def _porter_path(path: str, params: dict) -> str:
+def _agent_detection_path(path: str, params: dict) -> str:
     return f"{path}?{urlencode(params)}" if params else path
 
 
@@ -695,7 +697,7 @@ async def agent_detection_list_sites(ctx: Context) -> dict:
     website, with the domains its publishable key works on and the one-line
     script snippet to paste into the site's <head>."""
     api_key = _api_key_from_request(ctx)
-    result = await _request(api_key, "GET", "/porter/sites")
+    result = await _request(api_key, "GET", "/agent_detection/sites")
     items = result.get("items") if isinstance(result, dict) else None
     return {"sites": [s for s in (items or []) if isinstance(s, dict)]}
 
@@ -710,7 +712,7 @@ async def agent_detection_create_site(domain: str, ctx: Context, name: str = "")
     The publishable key is safe to put in a public web page: it only sends
     telemetry, only from the listed domains. Never put the Resemble API key in
     a page. Paste the snippet into the <head> of every page to cover; the page
-    can then listen for the 'porter:verdict' event or call Porter.onVerdict()."""
+    can then listen for the 'resemble:verdict' event or call ResembleAgentDetection.onVerdict()."""
     api_key = _api_key_from_request(ctx)
     clean = (domain or "").strip()
     if not clean or len(clean) > 253:
@@ -718,7 +720,7 @@ async def agent_detection_create_site(domain: str, ctx: Context, name: str = "")
     body: dict = {"domain": clean}
     if (name or "").strip():
         body["name"] = name.strip()[:200]
-    result = await _request(api_key, "POST", "/porter/sites", body=body)
+    result = await _request(api_key, "POST", "/agent_detection/sites", body=body)
     return {"site": _site_summary(_item(result))}
 
 
@@ -736,7 +738,7 @@ async def agent_detection_update_site(site_id: int, domains: list[str], ctx: Con
     body: dict = {"domains": clean[:50]}
     if (name or "").strip():
         body["name"] = name.strip()[:200]
-    result = await _request(api_key, "PATCH", f"/porter/sites/{int(site_id)}", body=body)
+    result = await _request(api_key, "PATCH", f"/agent_detection/sites/{int(site_id)}", body=body)
     return {"site": _site_summary(_item(result))}
 
 
@@ -760,8 +762,8 @@ async def agent_detection_get_analytics(
     'agent'), page_path, and since/until as ISO 8601 times. agent_share is
     agents / decided visits, or null when nothing is decided yet."""
     api_key = _api_key_from_request(ctx)
-    params = _porter_filters(site_id, settled, page_path, since, until, "")
-    result = await _request(api_key, "GET", _porter_path("/porter/analytics", params))
+    params = _agent_detection_filters(site_id, settled, page_path, since, until, "")
+    result = await _request(api_key, "GET", _agent_detection_path("/agent_detection/analytics", params))
     if isinstance(result, dict):
         result.pop("success", None)
     return {"analytics": result}
@@ -784,10 +786,10 @@ async def agent_detection_list_sessions(
     p_person, the page, referrer, user agent, and duration. Same filters as
     agent_detection_get_analytics plus a free-text search. per_page max 100."""
     api_key = _api_key_from_request(ctx)
-    params = _porter_filters(site_id, settled, page_path, since, until, search)
+    params = _agent_detection_filters(site_id, settled, page_path, since, until, search)
     params["page"] = max(1, int(page or 1))
     params["per_page"] = int(_clamp(per_page, 1, 100, 25))
-    result = await _request(api_key, "GET", _porter_path("/porter/sessions", params))
+    result = await _request(api_key, "GET", _agent_detection_path("/agent_detection/sessions", params))
     if not isinstance(result, dict):
         return {"sessions": []}
     return {
@@ -808,7 +810,7 @@ async def agent_detection_get_session(session_id: int, ctx: Context,
     200 events. The verdict is advisory: it comes from browser signals, which
     a determined attacker can fake."""
     api_key = _api_key_from_request(ctx)
-    result = await _request(api_key, "GET", f"/porter/sessions/{int(session_id)}")
+    result = await _request(api_key, "GET", f"/agent_detection/sessions/{int(session_id)}")
     item = _item(result)
     recording = item.get("recording")
     if isinstance(recording, dict):
