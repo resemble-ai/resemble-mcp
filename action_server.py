@@ -3,7 +3,8 @@ Resemble AI Action MCP Server — Detect + Intelligence execution tools.
 
 Runs alongside the docs server (server.py). Where the docs server answers questions
 ABOUT Resemble, this one RUNS Resemble: deepfake detection, media intelligence,
-audio source tracing, AI-text detection, and watermarking against
+audio source tracing, AI-text detection, watermarking, and Agent Detection
+(person-vs-AI-agent website visitor analytics) against
 https://app.resemble.ai/api/v2.
 
 Transport: Streamable HTTP (stateless), mounted at /mcp by server.py's SSE runner.
@@ -22,7 +23,7 @@ import ipaddress
 import json
 import re
 from typing import Any, Optional
-from urllib.parse import urlparse
+from urllib.parse import urlencode, urlparse
 
 import anyio
 import httpx
@@ -74,7 +75,10 @@ action_mcp = FastMCP(
         "Detect Agents run managed multi-step "
         "investigations (insurance claim, breaking news, ID, document, evidence, "
         "social content) that wrap detection in evidence gathering and a written "
-        "assessment. Authenticate every request with your Resemble API key as a "
+        "assessment. Agent Detection (tools prefixed agent_detection_) is a "
+        "different product: it tells a website whether each visitor is a person "
+        "or an AI agent; use it to set up a site's snippet and read its visitor "
+        "analytics. Authenticate every request with your Resemble API key as a "
         "Bearer token. Never declare media real or fake, or text AI- or human-"
         "written, without a completed detection result; always report the label "
         "with its score (for text: prediction with its confidence)."
@@ -640,3 +644,178 @@ async def get_detect_agent_run(preset_id: str, run_id: str, ctx: Context) -> dic
         raise ValueError("run_id must be the run id returned by run_detect_agent_investigation.")
     result = await _request(api_key, "GET", f"/agents/{clean_preset}/runs/{clean_run}")
     return {"result": _sanitize(result)}
+
+
+# --------------------------------------------------------------------------- #
+# Agent Detection (Porter): is a website visitor a person or an AI agent?
+#
+# Not to be confused with Detect Agents above. These tools manage the site
+# integrations (the publishable key + snippet a website embeds) and read the
+# visitor analytics, all with the caller's own API key. The browser-side
+# telemetry endpoint takes a publishable key and is deliberately not exposed.
+# Key rotation is also left out: it breaks every live page using the old key.
+# --------------------------------------------------------------------------- #
+_SETTLED_VALUES = {"human", "agent"}
+# Raw event streams run to thousands of pointer/key events per visit.
+_MAX_INLINE_EVENTS = 200
+
+
+def _porter_filters(site_id: Optional[int], settled: str, page_path: str,
+                    since: str, until: str, search: str) -> dict:
+    params: dict = {}
+    if site_id:
+        params["site_id"] = int(site_id)
+    clean_settled = (settled or "").strip().lower()
+    if clean_settled:
+        if clean_settled not in _SETTLED_VALUES:
+            raise ValueError("settled must be 'human' or 'agent'.")
+        params["settled"] = clean_settled
+    for key, value in (("page_path", page_path), ("from", since), ("to", until), ("q", search)):
+        if (value or "").strip():
+            params[key] = value.strip()
+    return params
+
+
+def _porter_path(path: str, params: dict) -> str:
+    return f"{path}?{urlencode(params)}" if params else path
+
+
+def _site_summary(site: Any) -> dict:
+    if not isinstance(site, dict):
+        return {}
+    keep = ("id", "name", "domains", "active", "publishable_key", "snippet", "created_at")
+    return {k: site.get(k) for k in keep if k in site}
+
+
+@action_mcp.tool()
+async def agent_detection_list_sites(ctx: Context) -> dict:
+    """List this team's Agent Detection integrations. Agent Detection tells a
+    website whether each visitor is a person or an AI agent (for example a
+    personal assistant browsing on someone's behalf). Each integration is one
+    website, with the domains its publishable key works on and the one-line
+    script snippet to paste into the site's <head>."""
+    api_key = _api_key_from_request(ctx)
+    result = await _request(api_key, "GET", "/porter/sites")
+    items = result.get("items") if isinstance(result, dict) else None
+    return {"sites": [s for s in (items or []) if isinstance(s, dict)]}
+
+
+@action_mcp.tool()
+async def agent_detection_create_site(domain: str, ctx: Context, name: str = "") -> dict:
+    """Create an Agent Detection integration for a website and return its
+    publishable key (pk_live_...) and the script snippet to install. domain is
+    the site's domain, e.g. example.com. If the team already has an integration
+    for that domain, the existing one is returned instead of a duplicate.
+
+    The publishable key is safe to put in a public web page: it only sends
+    telemetry, only from the listed domains. Never put the Resemble API key in
+    a page. Paste the snippet into the <head> of every page to cover; the page
+    can then listen for the 'porter:verdict' event or call Porter.onVerdict()."""
+    api_key = _api_key_from_request(ctx)
+    clean = (domain or "").strip()
+    if not clean or len(clean) > 253:
+        raise ValueError("domain must be a website domain such as example.com.")
+    body: dict = {"domain": clean}
+    if (name or "").strip():
+        body["name"] = name.strip()[:200]
+    result = await _request(api_key, "POST", "/porter/sites", body=body)
+    return {"site": _site_summary(_item(result))}
+
+
+@action_mcp.tool()
+async def agent_detection_update_site(site_id: int, domains: list[str], ctx: Context,
+                                      name: str = "") -> dict:
+    """Replace the list of domains an Agent Detection integration's publishable
+    key is valid on (for example to add a staging or www host), and optionally
+    rename it. domains replaces the whole list, so include every domain to keep;
+    at least one is required."""
+    api_key = _api_key_from_request(ctx)
+    clean = [d.strip() for d in (domains or []) if isinstance(d, str) and d.strip()]
+    if not clean:
+        raise ValueError("domains must list at least one domain to keep.")
+    body: dict = {"domains": clean[:50]}
+    if (name or "").strip():
+        body["name"] = name.strip()[:200]
+    result = await _request(api_key, "PATCH", f"/porter/sites/{int(site_id)}", body=body)
+    return {"site": _site_summary(_item(result))}
+
+
+@action_mcp.tool()
+async def agent_detection_get_analytics(
+    ctx: Context,
+    site_id: Optional[int] = None,
+    settled: str = "",
+    page_path: str = "",
+    since: str = "",
+    until: str = "",
+) -> dict:
+    """Summarise who is visiting a website: people vs AI agents. Returns totals
+    (visits, decided, agents, people, agent_share, gated), counts per visitor
+    class (human, computer_use_agent, browser_automation, scripted_client), and
+    breakdowns by page, day, and network. Use this to show how much traffic
+    comes from agents and which pages they use, so the site can be made easier
+    for helpful agents and protected from harmful ones.
+
+    Filters are optional: site_id (one integration), settled ('human' or
+    'agent'), page_path, and since/until as ISO 8601 times. agent_share is
+    agents / decided visits, or null when nothing is decided yet."""
+    api_key = _api_key_from_request(ctx)
+    params = _porter_filters(site_id, settled, page_path, since, until, "")
+    result = await _request(api_key, "GET", _porter_path("/porter/analytics", params))
+    if isinstance(result, dict):
+        result.pop("success", None)
+    return {"analytics": result}
+
+
+@action_mcp.tool()
+async def agent_detection_list_sessions(
+    ctx: Context,
+    site_id: Optional[int] = None,
+    settled: str = "",
+    page_path: str = "",
+    since: str = "",
+    until: str = "",
+    search: str = "",
+    page: int = 1,
+    per_page: int = 25,
+) -> dict:
+    """List individual website visits, newest first, each with its verdict
+    (settled: human, agent, or null while still open), visitor_class,
+    p_person, the page, referrer, user agent, and duration. Same filters as
+    agent_detection_get_analytics plus a free-text search. per_page max 100."""
+    api_key = _api_key_from_request(ctx)
+    params = _porter_filters(site_id, settled, page_path, since, until, search)
+    params["page"] = max(1, int(page or 1))
+    params["per_page"] = int(_clamp(per_page, 1, 100, 25))
+    result = await _request(api_key, "GET", _porter_path("/porter/sessions", params))
+    if not isinstance(result, dict):
+        return {"sessions": []}
+    return {
+        "sessions": result.get("items") or [],
+        "total": result.get("total"),
+        "page": result.get("page"),
+        "pages": result.get("pages"),
+    }
+
+
+@action_mcp.tool()
+async def agent_detection_get_session(session_id: int, ctx: Context,
+                                      include_events: bool = False) -> dict:
+    """Get one website visit and the evidence behind its verdict: the feature
+    vector it was decided from, plain-language observations, and each model
+    read. When the visit was recorded, the raw event stream is available;
+    it is omitted unless include_events is true, and then capped at the first
+    200 events. The verdict is advisory: it comes from browser signals, which
+    a determined attacker can fake."""
+    api_key = _api_key_from_request(ctx)
+    result = await _request(api_key, "GET", f"/porter/sessions/{int(session_id)}")
+    item = _item(result)
+    recording = item.get("recording")
+    if isinstance(recording, dict):
+        events = recording.get("events") or []
+        if include_events:
+            recording["events"] = events[:_MAX_INLINE_EVENTS]
+            recording["events_truncated"] = len(events) > _MAX_INLINE_EVENTS
+        else:
+            recording.pop("events", None)
+    return {"session": _sanitize(item)}

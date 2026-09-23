@@ -1,7 +1,7 @@
 # Connect to the Resemble AI MCP server
 
 One hosted server, every MCP client. Deepfake detection, media intelligence, audio
-source tracing, and watermarking.
+source tracing, watermarking, and Agent Detection (people vs AI agents on your website).
 
 - **Actions endpoint (recommended):** `https://mcp.resemble.ai/mcp` (Streamable HTTP)
 - **Docs endpoint:** `https://mcp.resemble.ai/sse` (SSE)
@@ -115,4 +115,6 @@ mcpServers:
 `detect_deepfake` · `get_detection` · `detect_ai_text` · `get_text_detection` ·
 `analyze_media` · `ask_about_detection` ·
 `detect_watermark` · `apply_watermark` · `trace_audio_source` ·
-`list_detect_agents` · `run_detect_agent_investigation` · `get_detect_agent_run`
+`list_detect_agents` · `run_detect_agent_investigation` · `get_detect_agent_run` ·
+`agent_detection_list_sites` · `agent_detection_create_site` · `agent_detection_update_site` ·
+`agent_detection_get_analytics` · `agent_detection_list_sessions` · `agent_detection_get_session`

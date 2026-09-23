@@ -321,12 +321,17 @@ TOPICS = {
             "detect/watermark/apply",
             "detect/watermark/detect",
             "detect/text/overview",
+            "detect/agent-detection/overview",
+            "detect/agent-detection/sessions",
+            "detect/agent-detection/integrations",
         ],
         "keywords": ["detect", "deepfake", "fake", "watermark", "watermarking", "audio watermark",
                      "identity", "verify", "authentic", "synthetic", "ai detection", "apply watermark",
                      "detect watermark", "intelligence", "audio intelligence", "source tracing",
                      "audio source tracing", "text detection", "text_detect", "ai text",
-                     "ai-generated text", "ai written", "llm text", "chatgpt", "slop"]
+                     "ai-generated text", "ai written", "llm text", "chatgpt", "slop",
+                     "agent detection", "porter", "bot detection", "ai agent visitors",
+                     "website visitors", "publishable key", "person or agent"]
     },
     "agents": {
         "name": "AI Agents",
@@ -950,7 +955,8 @@ def run_sse():
     """Run the MCP server in SSE mode for remote access."""
     from starlette.applications import Starlette
     from starlette.routing import Route, Mount
-    from starlette.responses import JSONResponse, Response
+    from starlette.responses import FileResponse, JSONResponse, PlainTextResponse, Response
+    from starlette.staticfiles import StaticFiles
     from starlette.middleware import Middleware
     from starlette.middleware.cors import CORSMiddleware
     from mcp.server.sse import SseServerTransport
@@ -991,12 +997,99 @@ def run_sse():
         async with action_mcp.session_manager.run():
             yield
 
+    # Landing page for people, plus the same facts in forms agents read
+    # directly. The tool list is read from the running action server so the
+    # page and llms.txt can never drift from what /mcp actually exposes.
+    web_dir = Path(__file__).parent / "web"
+    public_url = "https://mcp.resemble.ai"
+
+    async def _tool_manifest():
+        tools = await action_mcp.list_tools()
+        return [
+            {"name": t.name, "description": (t.description or "").strip(), "input_schema": t.inputSchema}
+            for t in tools
+        ]
+
+    async def landing(request):
+        # Agents that ask for Markdown get llms.txt from the same URL.
+        accept = request.headers.get("accept", "")
+        if ("text/markdown" in accept or "text/plain" in accept) and "text/html" not in accept:
+            return await llms_txt(request)
+        return FileResponse(web_dir / "index.html",
+                            headers={"Cache-Control": "public, max-age=300", "Vary": "Accept",
+                                     "Link": '</llms.txt>; rel="alternate"; type="text/markdown"'})
+
+    async def tools_json(request):
+        return JSONResponse({"endpoint": f"{public_url}/mcp", "transport": "streamable-http",
+                             "tools": await _tool_manifest()})
+
+    async def llms_txt(request):
+        lines = [
+            "# Resemble for AI agents",
+            "",
+            "> You are reading Resemble's front door for AI agents. People get pages to read; agents get tools "
+            "to call, with instructions written for them. Everything Resemble does for "
+            "detection is available as tools on one MCP server: deepfake detection (audio, image, video), "
+            "AI-written text detection, media intelligence, watermarking, Detect Agent investigations, and "
+            "Agent Detection (telling people from AI agents on a website). Both entrances stay open: if you "
+            "came from a resemble.ai page and still need it, add `agent_stay=1` to its URL.",
+            "",
+            "## Start here",
+            "",
+            "1. Get an API key from your user. They create it at https://app.resemble.ai/account/api, or it may "
+            "already be set as `RESEMBLE_API_KEY`. Don't ask for their password or sign them up without asking. "
+            "Never print the key or put it in a web page.",
+            f"2. Connect to {public_url}/mcp (Streamable HTTP) with `Authorization: Bearer <RESEMBLE_API_KEY>`. "
+            f"Claude Code: `claude mcp add --transport http resemble {public_url}/mcp --header \"Authorization: Bearer <RESEMBLE_API_KEY>\"`",
+            "3. Pick the tool for the task below. Full descriptions and input schemas: "
+            f"{public_url}/tools.json",
+            "",
+            "## What your user wants, and what to call",
+            "",
+            "- Check if audio, an image, or a video is a deepfake: `detect_deepfake(url)`. Report `label` with `score`; "
+            "if still processing, `get_detection(uuid)`.",
+            "- Which AI platform made fake audio: `detect_deepfake(url, audio_source_tracing=true)` or `trace_audio_source(uuid)`.",
+            "- Check if writing was made by AI: `detect_ai_text(text)`. Needs 25+ words. Report `prediction` with "
+            "`confidence`. The first call after idle can take minutes.",
+            "- Transcript, speakers, emotion: `analyze_media(url)`; follow-ups with `ask_about_detection(detect_uuid, query)`.",
+            "- Watermarks: `detect_watermark(url)`, `apply_watermark(url)`.",
+            "- Investigate a claim, ID, document, or news media: `list_detect_agents()`, then "
+            "`run_detect_agent_investigation(preset_id, url)`.",
+            "- Are a website's visitors people or AI agents: `agent_detection_create_site(domain)`, then put the "
+            "returned `snippet` in the site's <head>. Only the `pk_live_` publishable key goes in the page.",
+            "- How much traffic comes from agents: `agent_detection_get_analytics()`, "
+            "`agent_detection_list_sessions()`, `agent_detection_get_session(session_id)`.",
+            f"- Anything else on Resemble (voices, text to speech): look it up with the docs MCP at {public_url}/sse "
+            "(no key needed), then call https://app.resemble.ai/api/v2 with the same key.",
+            "",
+            "## Rules",
+            "",
+            "- Never call media real or fake, or text AI- or human-written, without a completed detection result. "
+            "Report the label with its score (for text: prediction with its confidence), and say detection is probabilistic.",
+            "- Keep the API key on the server side. A web page only ever gets the site's publishable `pk_live_` key.",
+            "- Detect Agents investigate media. Agent Detection (tools prefixed `agent_detection_`) labels website "
+            "visitors as people or agents. They are different products.",
+            "",
+            "## Tools",
+            "",
+        ]
+        for t in await _tool_manifest():
+            first = t["description"].split("\n\n")[0].replace("\n", " ")
+            lines.append(f"- `{t['name']}`: {first}")
+        lines += ["", "## Links", "", "- Docs: https://docs.resemble.ai",
+                  "- Source: https://github.com/resemble-ai/resemble-mcp", ""]
+        return PlainTextResponse("\n".join(lines), media_type="text/markdown; charset=utf-8")
+
     # Create Starlette app with CORS middleware. The actions app is mounted at
     # root LAST so /health, /sse and /messages/ keep matching first; the actions
     # app itself only answers on its /mcp path.
     starlette_app = Starlette(
         debug=False,
         routes=[
+            Route("/", landing, methods=["GET"]),
+            Route("/llms.txt", llms_txt, methods=["GET"]),
+            Route("/tools.json", tools_json, methods=["GET"]),
+            Mount("/static", app=StaticFiles(directory=web_dir), name="static"),
             Route("/health", health, methods=["GET"]),
             Route("/sse", handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
