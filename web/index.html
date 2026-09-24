@@ -9,6 +9,15 @@
 <link rel="alternate" type="text/markdown" href="/llms.txt" title="llms.txt">
 <!-- Resemble design system tokens (design-system/colors_and_type.css), unmodified -->
 <link rel="stylesheet" href="/static/colors_and_type.css">
+<!-- Resemble Agent Detection on our own front door. Listener first so no verdict is missed. -->
+<script>
+  window.addEventListener('resemble:verdict', function (e) {
+    // e.detail = { verdict: 'human' | 'agent' | 'review', kind, sessionId }
+    // This page is already written for agents, so nothing is blocked; the verdict is only exposed.
+    document.documentElement.dataset.resembleVerdict = e.detail.verdict;
+  });
+</script>
+<script async src="https://porter-api-prod.onrender.com/static/gate.js" data-resemble-key="pk_live_xvCzaNfK0Wk924qiOGuSeESs" data-resemble-endpoint="https://app.resemble.ai/api/v2/agent_detection/telemetry"></script>
 <style>
 /* ---------- base (ui_kits/marketing-website/styles.css) ---------- */
 * { box-sizing: border-box; }
