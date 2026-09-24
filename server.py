@@ -1080,6 +1080,18 @@ def run_sse():
                   "- Source: https://github.com/resemble-ai/resemble-mcp", ""]
         return PlainTextResponse("\n".join(lines), media_type="text/markdown; charset=utf-8")
 
+    async def robots_txt(request):
+        # Crawlers and AI agents are both welcome; only the protocol endpoints are off limits.
+        body = ("User-agent: *\nAllow: /\nDisallow: /mcp\nDisallow: /sse\nDisallow: /messages/\n\n"
+                f"Sitemap: {public_url}/sitemap.xml\n")
+        return PlainTextResponse(body, headers={"Cache-Control": "public, max-age=3600"})
+
+    async def sitemap_xml(request):
+        urls = "".join(f"<url><loc>{public_url}{p}</loc></url>" for p in ("/", "/llms.txt"))
+        body = ('<?xml version="1.0" encoding="UTF-8"?>'
+                f'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>')
+        return Response(body, media_type="application/xml", headers={"Cache-Control": "public, max-age=3600"})
+
     # Create Starlette app with CORS middleware. The actions app is mounted at
     # root LAST so /health, /sse and /messages/ keep matching first; the actions
     # app itself only answers on its /mcp path.
@@ -1089,6 +1101,8 @@ def run_sse():
             Route("/", landing, methods=["GET"]),
             Route("/llms.txt", llms_txt, methods=["GET"]),
             Route("/tools.json", tools_json, methods=["GET"]),
+            Route("/robots.txt", robots_txt, methods=["GET"]),
+            Route("/sitemap.xml", sitemap_xml, methods=["GET"]),
             Mount("/static", app=StaticFiles(directory=web_dir), name="static"),
             Route("/health", health, methods=["GET"]),
             Route("/sse", handle_sse, methods=["GET"]),
