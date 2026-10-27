@@ -33,6 +33,22 @@ def test_release_requires_registration_environment(monkeypatch):
         build.build()
 
 
+def test_release_accepts_padded_microsoft_vault_id(monkeypatch, tmp_path):
+    monkeypatch.setenv("RESEMBLE_OAUTH_REFERENCE_ID", "dGVuYW50IyNjb25maWd1cmF0aW9uLWlk=")
+    monkeypatch.setattr(build, "ROOT", tmp_path)
+    package = build.build()
+    assert package.exists()
+
+
+def test_microsoft_requires_nonzero_major_version():
+    content = files()
+    manifest = json.loads(content["manifest.json"])
+    manifest["version"] = "0.1.0"
+    content["manifest.json"] = json.dumps(manifest).encode()
+    with pytest.raises(AssertionError, match="major version"):
+        build.validate_contents(content, draft=True)
+
+
 def test_skill_mismatch_is_rejected():
     content = files()
     path = "skills/media-authenticity/SKILL.md"

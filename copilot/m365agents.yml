@@ -1,0 +1,26 @@
+# yaml-language-server: $schema=https://aka.ms/teams-toolkit/v1.9/yaml.schema.json
+version: v1.9
+environmentFolderPath: ./env
+
+# Register only the OAuth configuration. This does not deploy or publish the app.
+# Set RESEMBLE_OAUTH_CLIENT_ID to the dedicated public Resemble client UID.
+provision:
+  - uses: oauth/register
+    with:
+      name: Resemble AI Authenticity
+      appId: 72c6639e-278b-5823-a49a-7182206df136
+      applicableToApps: AnyApp
+      targetAudience: HomeTenant
+      flow: authorizationCode
+      clientId: ${{RESEMBLE_OAUTH_CLIENT_ID}}
+      identityProvider: Custom
+      isPKCEEnabled: true
+      tokenExchangeMethodType: PostRequestBody
+      baseUrl: https://mcp.resemble.ai/cowork/mcp
+      authorizationUrl: https://app.resemble.ai/oauth/authorize
+      tokenUrl: https://app.resemble.ai/oauth/token
+      refreshUrl: https://app.resemble.ai/oauth/token
+      scope: openid,api,offline_access
+    writeToEnvironmentFile:
+      configurationId: RESEMBLE_OAUTH_REFERENCE_ID
+projectId: 3f5bebbe-6137-484e-825a-a185b04a9308

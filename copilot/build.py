@@ -24,6 +24,7 @@ PLACEHOLDER = "UNCONFIGURED_OAUTH_REFERENCE"
 def validate_contents(files, *, draft=False):
     manifest = json.loads(files["manifest.json"])
     jsonschema.Draft7Validator(json.loads(SCHEMA.read_text())).validate(manifest)
+    assert int(manifest["version"].split(".")[0]) >= 1, "Microsoft requires an app major version of at least 1"
     connector = manifest["agentConnectors"][0]["toolSource"]["remoteMcpServer"]
     auth = connector["authorization"]
     assert auth["type"] == "OAuthPluginVault", "Cowork requires OAuth for this connector"
@@ -56,7 +57,8 @@ def validate_contents(files, *, draft=False):
 
 def build(draft=False):
     reference = os.getenv("RESEMBLE_OAUTH_REFERENCE_ID", "")
-    if not draft and (not reference or not re.fullmatch(r"[A-Za-z0-9_-]{8,128}", reference)):
+    # Microsoft's current opaque vault IDs are padded base64, not UUIDs.
+    if not draft and (not reference or not re.fullmatch(r"[A-Za-z0-9_+/-]{8,512}={0,2}", reference)):
         raise SystemExit("Release build blocked: set RESEMBLE_OAUTH_REFERENCE_ID to the actual Microsoft token-vault registration ID. Use --draft only for offline validation.")
     files = {str(p.relative_to(PACKAGE)): p.read_bytes() for p in sorted(PACKAGE.rglob("*")) if p.is_file()}
     manifest = json.loads(files["manifest.json"])

@@ -63,7 +63,14 @@ Create a dedicated Resemble OAuth application for this integration, without alte
 
 The current Resemble `api` scope is broad customer API access, subject to team permissions; it is not a detection-only or read-only permission. `offline_access` allows refresh. The six connector tools restrict the workflow surface, but do not narrow the underlying OAuth grant. Obtain the account owner's consent accordingly. Only request profile/email scopes if an observed Microsoft requirement makes them necessary.
 
-Create the matching OAuth registration in Teams Developer Portal → Tools → OAuth client registration:
+Create the matching OAuth registration with the official toolkit. The current Developer Portal form incorrectly requires a client secret for public PKCE clients; the toolkit accepts the secret-free configuration:
+
+```sh
+# Set RESEMBLE_OAUTH_CLIENT_ID to the actual dedicated Resemble public client UID.
+atk provision --folder copilot --env dev
+```
+
+`copilot/m365agents.yml` registers only the OAuth configuration, restricted to the current Microsoft tenant. It does not deploy or publish the app. The returned vault ID is saved in the ignored `copilot/env/.env.dev`; preserve it to avoid creating duplicate registrations. View the resulting record in Teams Developer Portal → Tools → OAuth client registration:
 
 | Setting | Value |
 |---|---|
@@ -73,7 +80,7 @@ Create the matching OAuth registration in Teams Developer Portal → Tools → O
 | Client secret | None for the public PKCE client |
 | Authorization endpoint | `https://app.resemble.ai/oauth/authorize` |
 | Token / refresh endpoint | `https://app.resemble.ai/oauth/token` |
-| Scope | `openid api offline_access` |
+| Scope | Three separate scopes: `openid`, `api`, `offline_access` (comma separated in toolkit/portal configuration) |
 | PKCE | Enabled |
 | App restriction | Any Teams app, per Microsoft's MCP guidance |
 | Organization restriction | My organization for initial testing; Any Microsoft 365 organization for approved cross-tenant distribution |
@@ -92,8 +99,8 @@ The gateway validates the bearer against Resemble `/api/v2/account` on every MCP
 
 After deploying the connector and configuring OAuth, use a licensed work account with Cowork and custom-app installation enabled:
 
-1. Run `atk auth login m365`, then `atk validate --package-file copilot/dist/resemble-cowork-0.1.0.zip --validate-method validation-rules`. This is Microsoft service validation, which requires sign-in; local schema checks do not replace it.
-2. Run `atk install --file-path copilot/dist/resemble-cowork-0.1.0.zip --scope Personal`. Record its actual TitleId and AppId. Do not install tenant-wide for a personal test.
+1. Run `atk auth login m365`, then `atk validate --package-file copilot/dist/resemble-cowork-1.0.0.zip --validate-method validation-rules`. This is Microsoft service validation, which requires sign-in; local schema checks do not replace it. Microsoft requires the major app version to be at least 1, including development candidates.
+2. Run `atk install --file-path copilot/dist/resemble-cowork-1.0.0.zip --scope Personal`. Record its actual TitleId and AppId. Do not install tenant-wide for a personal test.
 3. Open Cowork → Sources & Skills → Plugins. Confirm Resemble appears and enable it.
 4. Connect the dedicated Resemble account through Microsoft's OAuth flow. Verify the publisher, callback, permissions, selected team, and successful return to Cowork. Confirm the public PKCE exchange works in this host; do not infer it from discovery metadata.
 5. Ask: “Use Resemble to check this image: https://mcp.resemble.ai/static/logo-square-green.png. Report the detection UUID, status, label and score.” Verify the tool trace and a completed live job, not a model-generated answer.
