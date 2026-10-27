@@ -27,6 +27,7 @@ These demonstrate functional integration only, not detector accuracy or real-wor
 ## Still required
 
 - Deploy the new connector to a reachable HTTPS host before Microsoft calls it. The public production `/cowork/mcp` endpoint has not been deployed by this work.
+- Enable Cowork usage-based billing for the test account. The tenant Cowork admin page currently reports that billing is not configured; no billing changes were made.
 - Complete host testing with a licensed Copilot account. The administrator account used for registration and personal installation has only Teams Exploratory; Cowork is absent from its UI. A separate licensed work account is needed.
 - Verify skill activation, OAuth consent/code exchange, attachment mapping, live tool results, refresh, and revocation in Cowork itself.
 - Public store submission and Microsoft review are not performed.
