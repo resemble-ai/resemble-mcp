@@ -41,3 +41,10 @@ htmlcov/
 
 # Logs
 *.log
+
+# Copilot local credentials and generated artifacts
+.env
+.env.*
+copilot/fixtures/
+copilot/evidence/
+copilot/dist/

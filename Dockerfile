@@ -9,6 +9,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application code
 COPY server.py .
 COPY action_server.py .
+COPY cowork_server.py .
 COPY docs/ ./docs/
 COPY openapi/ ./openapi/
 COPY web/ ./web/

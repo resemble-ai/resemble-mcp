@@ -1,0 +1,36 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.29",
+  "version": "1.0.0",
+  "id": "72c6639e-278b-5823-a49a-7182206df136",
+  "developer": {
+    "name": "Resemble AI",
+    "websiteUrl": "https://www.resemble.ai",
+    "privacyUrl": "https://www.resemble.ai/privacy-policy",
+    "termsOfUseUrl": "https://www.resemble.ai/terms-of-service"
+  },
+  "name": {
+    "short": "Resemble AI",
+    "full": "Resemble AI Authenticity for Copilot Cowork"
+  },
+  "description": {
+    "short": "Analyze media and text for AI generation with Resemble AI.",
+    "full": "Use Resemble AI to analyze audio, images, video, and text for synthetic content. Submit a media link or workspace attachment, retrieve detection results, and ask follow-up questions grounded in a completed report. Optional media intelligence adds context and supported audio source tracing helps investigate synthesis origins. Requires a Resemble account with access to the requested capabilities; analyses may consume account credits. Detection is probabilistic and does not establish identity, intent, factual truth, or legal proof."
+  },
+  "icons": {"color": "color.png", "outline": "outline.png"},
+  "accentColor": "#579C87",
+  "agentSkills": [
+    {"folder": "./skills/media-authenticity"},
+    {"folder": "./skills/text-authenticity"},
+    {"folder": "./skills/detection-brief"}
+  ],
+  "agentConnectors": [{
+    "id": "resemble-authenticity",
+    "displayName": "Resemble AI Authenticity",
+    "description": "Authenticated media and text detection with asynchronous results and grounded follow-up analysis.",
+    "toolSource": {"remoteMcpServer": {
+      "mcpServerUrl": "https://mcp.resemble.ai/cowork/mcp",
+      "authorization": {"type": "OAuthPluginVault", "referenceId": "${{RESEMBLE_OAUTH_REFERENCE_ID}}"}
+    }}
+  }]
+}
