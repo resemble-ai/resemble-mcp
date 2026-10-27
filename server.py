@@ -982,19 +982,21 @@ def run_sse():
         return JSONResponse({
             "status": "healthy",
             "server": "resemble-ai-docs",
-            "endpoints": {"docs_sse": "/sse", "actions_streamable_http": "/mcp"},
+            "endpoints": {"docs_sse": "/sse", "actions_streamable_http": "/mcp", "copilot_streamable_http": "/cowork/mcp"},
         })
 
     # Action MCP server (Detect + Intelligence execution tools) — Streamable HTTP.
     # Docs tools stay on /sse; action tools live at /mcp with BYO-key auth.
     from action_server import action_mcp
     actions_app = action_mcp.streamable_http_app()
+    from cowork_server import cowork_mcp, AuthenticatedMCP, protected_resource
+    cowork_app = cowork_mcp.streamable_http_app()
 
     import contextlib
 
     @contextlib.asynccontextmanager
     async def lifespan(app_):
-        async with action_mcp.session_manager.run():
+        async with action_mcp.session_manager.run(), cowork_mcp.session_manager.run():
             yield
 
     # Landing page for people, plus the same facts in forms agents read
@@ -1107,6 +1109,8 @@ def run_sse():
             Route("/health", health, methods=["GET"]),
             Route("/sse", handle_sse, methods=["GET"]),
             Mount("/messages/", app=sse.handle_post_message),
+            Route("/.well-known/oauth-protected-resource/cowork/mcp", protected_resource, methods=["GET"]),
+            Mount("/cowork", app=AuthenticatedMCP(cowork_app)),
             Mount("/", app=actions_app),
         ],
         middleware=[
