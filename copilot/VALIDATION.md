@@ -1,10 +1,10 @@
 # Validation record — 2026-10-27
 
-Status: **connector and live Resemble API checks passed; Microsoft Cowork host end-to-end test pending**.
+Status: **version 1.0.0 functional end-to-end tests passed in Microsoft Cowork; version 1.0.1 hardens an unavailable-audio case found by those tests and awaits deployment**.
 
 ## Completed
 
-- 36 automated tests passed: authenticated MCP, tool schemas and safety annotations, direct uploads, malformed inputs, partial results, mixed audio/video evidence, zero-valued scores, question lifecycle, bounded uploads, upstream failures, and package gates.
+- 41 automated tests passed (36 original checks plus five unavailable-audio regression cases): authenticated MCP, tool schemas and safety annotations, direct uploads, malformed inputs, partial results, mixed audio/video evidence, zero-valued scores, question lifecycle, bounded uploads, upstream failures, and package gates.
 - Microsoft `@microsoft/app-manifest` 1.1.3 accepted the manifest against Microsoft's v1.29 schema with zero errors. This is schema validation, not service validation or store approval.
 - Microsoft service package validation through Agents Toolkit passed all 59 rules for the actual 1.0.0 ZIP containing the registered OAuth reference. The first validation caught Microsoft's nonzero-major-version requirement; corrected before installation.
 - Saved the owner-approved dedicated Resemble public OAuth client and registered it with Microsoft's token vault through `oauth/register`, using PKCE, no shared secret, and the home tenant restriction. Verified the resulting settings in Developer Portal. Its form currently requires a secret even with PKCE, so the checked-in toolkit configuration is the reproducible registration path.
@@ -24,14 +24,44 @@ Status: **connector and live Resemble API checks passed; Microsoft Cowork host e
 
 These demonstrate functional integration only, not detector accuracy or real-world effectiveness. The fixtures were a Resemble logo, system-generated speech, a logo video with that speech, and generated test prose. No customer media was used.
 
-## Still required
+## Deployed verification
 
-- Deploy the new connector to a reachable HTTPS host before Microsoft calls it. The public production `/cowork/mcp` endpoint has not been deployed by this work.
-- Enable Cowork usage-based billing for the test account. The tenant Cowork admin page currently reports that billing is not configured; no billing changes were made.
-- Complete host testing with a licensed Copilot account. The administrator account used for registration and personal installation has only Teams Exploratory; Cowork is absent from its UI. A separate licensed work account is needed.
-- Verify skill activation, OAuth consent/code exchange, attachment mapping, live tool results, refresh, and revocation in Cowork itself.
-- Public store submission and Microsoft review are not performed.
+PR #9 was merged by the repository owner and deployed to the existing Resemble MCP service. Production health advertises `/cowork/mcp`; unauthenticated access returns 401 and protected-resource metadata points to Resemble's authorization server. A real MCP client against the deployed endpoint completed image, video-with-audio, text, and follow-up-question jobs. The slowest recorded call was 1.298 seconds. These used API-key credentials and are still distinct from Microsoft-host OAuth testing.
 
-The release builder refuses a missing or placeholder OAuth registration. The tenant-scoped 1.0.0 ZIP has been installed for testing, but is not yet a verified working plugin. The separately generated DRAFT ZIP remains for offline review only.
+## Microsoft Cowork host verification
 
-Raw local evidence is saved under ignored `copilot/evidence/`: `live-smoke.json`, `live-video.json`, `live-question.json`, `combined-server.json`, `microsoft-schema-validation.json`, `microsoft-package-validation.txt`, and `microsoft-install.json`, plus registration screenshots. No access tokens, passwords, or client secrets are recorded.
+The tenant administrator activated Cowork billing. A licensed work account opened Cowork, installed version 1.0.0, enabled all three skills, and connected through the dedicated Resemble OAuth client. The owner completed team-specific consent. Cowork visibly showed Connected and executed all six tools against the deployed endpoint.
+
+| Host case | Observed result |
+|---|---|
+| Public Resemble logo URL | Completed; image label Real, score 0.030211485104490374 |
+| Analyst follow-up | Question submitted once and polled to a completed answer |
+| Generated text passage | Completed; prediction ai, confidence 0.9713 |
+| Cowork-created PNG, 3,565 bytes | Completed; actual workspace-path mapping delivered the file; image score 0.2405310515040822 |
+| Cowork-created WAV tone, 160,044 bytes | Completed; correct filename, audio type and 5-second duration; no usable audio scores |
+| Cowork-created MP4, 44,846 bytes | Completed; correct filename, video type and 5-second duration; video score 0.04680093312396712, separate unavailable audio |
+
+The host had ffmpeg but no usable offline speech synthesizer. WAV/MP4 host tests therefore used a 440 Hz tone, not spoken audio. Earlier API-backed tests used synthesized speech. Neither is an accuracy benchmark. One parallel media call was definitively blocked by Cowork's approval system before execution; its sequential retry succeeded. No uncertain submission was retried.
+
+The actual job IDs and results were independently retrieved through Resemble's API. That read-only API-key verification supplements the Cowork tool trace; it does not replace the OAuth host test. Raw host traces, connection/result screenshots, and job IDs remain in ignored local evidence to avoid publishing account details.
+
+Installed/tested 1.0.0 ZIP SHA-256: `05d52e334a14cbf4ec3103c5639d526858136fbdbcd554fbb5ab9595cf693b0e`.
+
+## Edge case found and corrected in 1.0.1
+
+The no-speech fixtures returned audio `label: real`, `score: [null]`, and `aggregated_score: -1.0`. Cowork correctly explained that these did not establish authenticity, but the connector should make that state explicit. Updated normalization marks audio without any finite nonnegative score as unavailable, preserves the upstream label under `reported_label`, and preserves raw scores and independent video results. Valid zeros remain valid.
+
+All 41 automated tests pass. The updated local MCP connector also read the actual Cowork-created WAV/MP4 jobs from production Resemble and returned unavailable audio while retaining the video result. A previously completed speech-containing MP4 retained its usable audio assessment. No new jobs were submitted for that regression check. This verifies the fix locally against real results, not its production deployment.
+
+The 1.0.1 package passed Microsoft service validation. ZIP SHA-256: `b6d3be423f0605e78619ae097336caa21a815e887cd05623170c69f98eb8b2c3`.
+
+## Remaining release checks
+
+- Deploy the 1.0.1 server correction and reread the existing no-speech job from Cowork to verify the production result.
+- Access-token refresh after expiry and upstream grant revocation/reconnection are not yet verified in the host. Automated rejection tests do not replace those lifecycle checks.
+- Speech-containing workspace attachments remain untested in Cowork; image, tone WAV, and mixed video/tone delivery are verified.
+- Public store submission, cross-tenant installation, and Microsoft review are not performed. The OAuth registration remains restricted to the home tenant.
+
+The release builder refuses a missing or placeholder OAuth registration. The separately generated DRAFT ZIP is for offline review only.
+
+Local evidence under ignored `copilot/evidence/` includes API smoke records, Microsoft schema/service validation and installation records, OAuth setup screenshots, `cowork-image-question.txt`, `cowork-text.txt`, `cowork-file-mapping.txt`, `cowork-files.txt`, `cowork-jobs-api-verification.json`, and `unscored-audio-live-regression.json`. No access tokens, passwords, or client secrets are recorded.

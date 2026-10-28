@@ -132,8 +132,34 @@ def test_completed_preserves_zero_and_mixed_modalities(client, upstream):
     }})
     result = structured(call(client, "get_media_detection", {"uuid": UUID}))
     assert result["metrics"]["aggregated_score"] == 0
+    assert result["metrics"]["assessment_available"] is True
+    assert result["metrics"]["label"] == "real"
     assert result["video_metrics"]["label"] == "fake"
     assert "url" not in result
+
+
+@pytest.mark.parametrize("scores", [[None], [-1], [], None])
+def test_completed_unscored_audio_is_unavailable_without_hiding_video(client, upstream, scores):
+    _, responses = upstream
+    responses[("GET", f"/api/v2/detect/{UUID}")] = httpx.Response(200, json={"item": {
+        "uuid": UUID, "status": "completed", "media_type": "video",
+        "metrics": {"label": "real", "score": scores, "aggregated_score": -1.0,
+                    "consistency": -1.0, "duration": -1.0},
+        "video_metrics": {"label": "Real", "score": 0.04680093312396712},
+    }})
+    result = structured(call(client, "get_media_detection", {"uuid": UUID}))
+    assert result["completed"] is True
+    assert result["metrics"]["assessment_available"] is False
+    assert result["metrics"]["label"] == "unavailable"
+    assert result["metrics"]["reported_label"] == "real"
+    assert result["metrics"]["score"] == scores
+    assert result["video_metrics"] == {"label": "Real", "score": 0.04680093312396712}
+
+
+def test_zero_audio_chunk_score_remains_available():
+    result = cs.summarize({"status": "completed", "metrics": {"label": "real", "score": [None, 0]}})
+    assert result["metrics"]["assessment_available"] is True
+    assert result["metrics"]["label"] == "real"
 
 
 def test_text_abstention_and_no_echo(client, upstream):

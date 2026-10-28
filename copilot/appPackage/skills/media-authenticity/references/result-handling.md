@@ -4,6 +4,8 @@ Audio evidence may appear under `metrics`, image evidence under `image_metrics`,
 
 Only report fields actually returned. Explain conflicts rather than selecting a favored modality. An absent audio result on a video does not establish that its audio is authentic. A completed job with missing metrics is insufficient for that assessment.
 
+Audio with `assessment_available: false` is unavailable, not authentic. The connector preserves an unsupported upstream label under `reported_label` while setting `label` to `unavailable`. Null scores and negative sentinel values such as -1 are not usable evidence. This can occur for non-speech input, but do not infer a specific cause unless the service states it. Valid zero scores remain evidence. Keep usable video results separate from unavailable audio.
+
 Pending or processing: preserve the UUID and read it later. Failed, error, or cancelled: report the failure. Unknown status: do not claim completion. When source tracing or contextual intelligence is still processing separately, describe that component as pending even if the primary detection is complete.
 
 Follow-up explanations must remain grounded in returned evidence. A model score is not a calibrated probability of fraud or a substitute for independent verification. A source label reflects a supported model's inference and does not establish who created the media.
