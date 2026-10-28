@@ -1,6 +1,6 @@
 # Resemble AI for Microsoft Copilot Cowork
 
-Resemble-branded Microsoft 365 plugin source, with three skills and six live-service tools. This is a development candidate, **not a Microsoft-certified or published store listing**. A package passing schema validation is not evidence of a successful Cowork installation or OAuth connection.
+Resemble-branded Microsoft 365 plugin source, with three skills and six live-service tools. Version 1.0.0 completed live OAuth and all six tool workflows in Microsoft Cowork, including PNG, WAV, and MP4 workspace-file delivery. See [the validation record](VALIDATION.md) for evidence and remaining lifecycle checks. This is **not a Microsoft-certified or published store listing**.
 
 The plugin checks audio, images, video, and text, and answers questions about completed detection reports. It sends only the inputs selected for a tool call to Resemble. Creation calls can consume credits. It does not send email, change files in Microsoft 365, or create a public media upload.
 
@@ -16,7 +16,9 @@ The plugin checks audio, images, video, and text, and answers questions about co
 | `smoke.py` | MCP SDK test through the running connector to real Resemble APIs |
 | `../tests/` | Protocol, errors, upload, auth, result semantics, and packaging tests |
 
-Supported tools are `submit_media_detection`, `get_media_detection`, `submit_text_detection`, `get_text_detection`, `submit_detection_question`, and `get_detection_answer`. Media submissions accept a public HTTPS URL or a file up to 10 MiB. The file schema uses a top-level string with `contentEncoding: base64`, allowing Cowork to supply bytes outside the model context. This mapping must still be tested in the Cowork host.
+Supported tools are `submit_media_detection`, `get_media_detection`, `submit_text_detection`, `get_text_detection`, `submit_detection_question`, and `get_detection_answer`. Media submissions accept a public HTTPS URL or a file up to 10 MiB. The file schema uses a top-level string with `contentEncoding: base64`, allowing Cowork to supply bytes outside the model context. This mapping was verified with real PNG, WAV, and MP4 workspace files in Cowork.
+
+Version 1.0.1 adds handling for completed audio jobs with no usable scores: `assessment_available` is false, `label` is `unavailable`, and `reported_label` preserves the original upstream label. Null values and negative sentinels cannot establish authenticity. Valid zeros and separate video evidence remain unchanged.
 
 Submitting and retrieving are separate operations. The server does not keep the client waiting for inference or automatically retry a POST. It shares a 20-second upstream budget across calls in a tool execution; account validation has a separate four-second budget. A submission timeout has an unknown outcome and must not trigger automatic resubmission. Exact scores, including zero, and distinct audio/video outcomes are preserved. Incomplete results do not expose partial verdict fields.
 
@@ -99,16 +101,16 @@ The gateway validates the bearer against Resemble `/api/v2/account` on every MCP
 
 After deploying the connector and configuring OAuth, use a licensed work account with Cowork and custom-app installation enabled:
 
-1. Run `atk auth login m365`, then `atk validate --package-file copilot/dist/resemble-cowork-1.0.0.zip --validate-method validation-rules`. This is Microsoft service validation, which requires sign-in; local schema checks do not replace it. Microsoft requires the major app version to be at least 1, including development candidates.
-2. Run `atk install --file-path copilot/dist/resemble-cowork-1.0.0.zip --scope Personal`. Record its actual TitleId and AppId. Do not install tenant-wide for a personal test.
-3. Open Cowork → Sources & Skills → Plugins. Confirm Resemble appears and enable it.
+1. Run `atk auth login m365`, then `atk validate --package-file copilot/dist/resemble-cowork-1.0.1.zip --validate-method validation-rules`. This is Microsoft service validation, which requires sign-in; local schema checks do not replace it. Microsoft requires the major app version to be at least 1, including development candidates.
+2. Run `atk install --file-path copilot/dist/resemble-cowork-1.0.1.zip --scope Personal`. Record its actual TitleId and AppId. Do not install tenant-wide for a personal test.
+3. Open Cowork → Customize → Discover. Open Resemble AI, select Install if prompted, and confirm it is enabled with all three skills. Older Cowork versions may label this area Sources & Skills → Plugins.
 4. Connect the dedicated Resemble account through Microsoft's OAuth flow. Verify the publisher, callback, permissions, selected team, and successful return to Cowork. Confirm the public PKCE exchange works in this host; do not infer it from discovery metadata.
 5. Ask: “Use Resemble to check this image: https://mcp.resemble.ai/static/logo-square-green.png. Report the detection UUID, status, label and score.” Verify the tool trace and a completed live job, not a model-generated answer.
-6. Attach a purpose-made synthetic WAV and ask the same question. Verify Cowork's file-path mapping, byte delivery, one submission, and completed result. Repeat with a small MP4 and verify both audio and video evidence.
+6. Attach a purpose-made synthetic WAV and ask the same question. Alternatively, have Cowork create non-sensitive fixtures in its workspace. Verify Cowork's file-path mapping, byte delivery, one submission, and completed result. Repeat with a small MP4 and verify both audio and video evidence. A tone tests transport and unavailable-audio handling, not speech detection. Submit files sequentially: Cowork may reject a second write call while another approval is pending. Only retry a definitively unexecuted call; never automatically retry an uncertain network submission.
 7. Ask to analyze a generated 50-word passage. Confirm prediction and confidence are not confused, and no judgment is made while pending.
 8. Ask: “Explain the completed media result and its limitations.” Verify question submission and answer retrieval through the plugin.
 9. Revoke the Resemble connection, then retry. Verify access is denied. Reconnect and confirm refresh behavior after access-token expiry without exposing tokens.
-10. Save screenshots and redacted tool traces, the package SHA-256, Microsoft IDs, job IDs, and the account's tested entitlement context. Mark host E2E passed only after these checks succeed.
+10. Save screenshots and redacted tool traces, the package SHA-256, Microsoft IDs, job IDs, and the account's tested entitlement context. Report functional host testing separately from refresh/revocation testing and publication approval; do not imply unperformed checks passed.
 
 For a temporary development host, set `COWORK_PUBLIC_ORIGIN` to its exact HTTPS origin **before starting** the service, update the connector URL and Microsoft OAuth base URL together, and keep authentication enabled. Production should use the existing Resemble-owned host. Do not expose an unauthenticated key-bearing proxy to make a demo work.
 
