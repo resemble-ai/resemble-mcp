@@ -72,7 +72,7 @@ def test_invalid_and_revoked_tokens_rejected_on_next_request(client, upstream):
 def test_discovery_annotations_and_cowork_attachment_schema(client, upstream):
     result = client.post("/cowork/mcp", headers=AUTH,
                          json={"jsonrpc": "2.0", "id": 1, "method": "tools/list"}).json()["result"]
-    assert len(result["tools"]) == 6
+    assert len(result["tools"]) == 7
     for tool in result["tools"]:
         a = tool["annotations"]
         assert a["readOnlyHint"] == tool["name"].startswith("get_")
@@ -82,6 +82,10 @@ def test_discovery_annotations_and_cowork_attachment_schema(client, upstream):
     upload = next(t for t in result["tools"] if t["name"] == "submit_media_detection")
     assert upload["inputSchema"]["properties"]["file"]["type"] == "string"
     assert upload["inputSchema"]["properties"]["file"]["contentEncoding"] == "base64"
+    signal = next(t for t in result["tools"] if t["name"] == "score_signal_content")
+    assert signal["inputSchema"]["properties"]["file"]["type"] == "string"
+    assert signal["inputSchema"]["properties"]["file"]["contentEncoding"] == "base64"
+    assert signal["inputSchema"]["properties"]["text"]["maxLength"] == 20000
 
 
 def test_submit_and_poll_are_separate(client, upstream):
@@ -219,3 +223,83 @@ def test_ids_cannot_change_upstream_route(client, upstream, uuid):
     requests, _ = upstream
     assert call(client, "get_media_detection", {"uuid": uuid})["isError"]
     assert len(requests) == 1
+
+
+@pytest.mark.parametrize("verdict", ["safe", "suspicious", "fraud"])
+def test_signal_text_evidence_and_source_coverage_without_fetching(client, upstream, verdict):
+    import hashlib
+    requests, responses = upstream
+    responses[("POST", "/api/v2/signal")] = httpx.Response(200, json={"item": {
+        "id": 42, "input_modality": "text", "verdict": verdict,
+        "top_category": {"name": "Reference category", "score": 0},
+        "benign_score": 0, "text": "private echo", "text_preview": "private preview",
+        "examples": ["reference phrase"], "top_matches": [{"text": "reference example", "score": 0.8}],
+    }})
+    text = "A public source passage, supplied exactly as retrieved."
+    source = "https://example.org/article"
+    result = structured(call(client, "score_signal_content", {"text": text, "source_url": source}))
+    assert result["verdict"] == verdict and result["assessment_available"] is True
+    assert result["status"] == "completed" and result["id"] == 42
+    assert result["top_category"]["score"] == 0 and result["benign_score"] == 0
+    assert "text" not in result and "text_preview" not in result
+    assert result["top_matches"][0]["text"] == "reference example"
+    assert result["coverage"] == {"input_kind": "text", "characters_submitted": len(text),
+        "scope": "submitted_content_only", "source_url": source,
+        "content_sha256": hashlib.sha256(text.encode()).hexdigest()}
+    assert [(r.method, r.url.path) for r in requests] == [("GET", "/api/v2/account"), ("POST", "/api/v2/signal")]
+    assert json.loads(requests[-1].content) == {"text": text}
+
+
+def test_signal_workspace_file_upload(client, upstream):
+    requests, responses = upstream
+    responses[("POST", "/api/v2/signal")] = httpx.Response(200, json={"item": {
+        "id": 43, "input_modality": "image", "verdict": "fraud",
+        "top_category": {"name": "Impersonation", "score": 0.9},
+    }})
+    result = structured(call(client, "score_signal_content", {
+        "file": base64.b64encode(b"fixture-bytes").decode(), "filename": "fixture.png"}))
+    assert result["coverage"]["bytes_submitted"] == 13
+    assert result["coverage"]["filename"] == "fixture.png"
+    assert result["input_modality"] == "image"
+    assert b'filename="fixture.png"' in requests[-1].content
+    assert b"fixture-bytes" in requests[-1].content
+    assert b"image/png" in requests[-1].content
+
+
+@pytest.mark.parametrize("arguments", [
+    {}, {"text": "  "}, {"text": "https://example.org"},
+    {"text": "text", "file": "AAAA", "filename": "file.png"},
+    {"text": "  ", "file": "AAAA", "filename": "file.png"},
+    {"text": "text", "filename": "file.png"}, {"text": "a" * 20001},
+    {"text": "text", "source_url": "https://user:secret@example.org/"},
+    {"text": "text", "source_url": "https://127.0.0.1/"},
+    {"file": "AAAA", "filename": "../file.png"}, {"file": "!", "filename": "file.png"},
+])
+def test_signal_invalid_inputs_never_reach_signal(client, upstream, arguments):
+    requests, _ = upstream
+    assert call(client, "score_signal_content", arguments)["isError"]
+    assert all(r.method == "GET" for r in requests)
+
+
+@pytest.mark.parametrize("item", [
+    {}, {"id": 12, "verdict": "safe"},
+    {"verdict": "safe", "top_category": {"name": "Test", "score": None}},
+    {"verdict": "unknown", "top_category": {"name": "Test", "score": 0.9}},
+    {"status": "processing", "verdict": "safe", "top_category": {"name": "Test", "score": 0.9}},
+])
+def test_signal_incomplete_result_is_never_safe(client, upstream, item):
+    _, responses = upstream
+    responses[("POST", "/api/v2/signal")] = httpx.Response(200, json={"item": item})
+    result = structured(call(client, "score_signal_content", {"text": "Test content"}))
+    assert result["assessment_available"] is False and result["status"] == "unavailable"
+    assert "verdict" not in result
+
+
+@pytest.mark.parametrize("failure", [403, 429, 500, "timeout"])
+def test_signal_failures_are_not_retried_or_safe(client, upstream, failure):
+    requests, responses = upstream
+    responses[("POST", "/api/v2/signal")] = (httpx.ReadTimeout("sensitive upstream details")
+        if failure == "timeout" else httpx.Response(failure, text="sensitive upstream details"))
+    result = call(client, "score_signal_content", {"text": "Test content"})
+    assert result["isError"] and "sensitive upstream details" not in str(result)
+    assert sum(r.method == "POST" for r in requests) == 1

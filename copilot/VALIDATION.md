@@ -1,6 +1,6 @@
 # Validation record — 2026-10-27
 
-Status: **version 1.0.0 functional end-to-end tests passed in Microsoft Cowork; version 1.0.1 hardens an unavailable-audio case found by those tests and awaits deployment**.
+Status: **the original authenticity workflows and 1.0.1 audio correction are verified in deployed Microsoft Cowork. Version 1.1.0 Signal passes local/live-API and package validation; its deployment and Cowork activation tests remain pending**.
 
 ## Completed
 
@@ -51,13 +51,23 @@ Installed/tested 1.0.0 ZIP SHA-256: `05d52e334a14cbf4ec3103c5639d526858136fbdbcd
 
 The no-speech fixtures returned audio `label: real`, `score: [null]`, and `aggregated_score: -1.0`. Cowork correctly explained that these did not establish authenticity, but the connector should make that state explicit. Updated normalization marks audio without any finite nonnegative score as unavailable, preserves the upstream label under `reported_label`, and preserves raw scores and independent video results. Valid zeros remain valid.
 
-All 41 automated tests pass. The updated local MCP connector also read the actual Cowork-created WAV/MP4 jobs from production Resemble and returned unavailable audio while retaining the video result. A previously completed speech-containing MP4 retained its usable audio assessment. No new jobs were submitted for that regression check. This verifies the fix locally against real results, not its production deployment.
+All 41 automated tests pass. The updated local MCP connector also read the actual Cowork-created WAV/MP4 jobs from production Resemble and returned unavailable audio while retaining the video result. A previously completed speech-containing MP4 retained its usable audio assessment. No new jobs were submitted for that regression check. The owner subsequently merged PR #10. Production returned the corrected fields, and a fresh Cowork task reread the existing WAV/MP4 jobs through OAuth, confirming unavailable audio and preserved video results without new submissions. Evidence: `cowork-deployed-fix.txt`, `cowork-deployed-fix.png`, and `host-validation-final.json`.
 
 The 1.0.1 package passed Microsoft service validation. ZIP SHA-256: `b6d3be423f0605e78619ae097336caa21a815e887cd05623170c69f98eb8b2c3`.
 
+## Signal 1.1.0 validation
+
+- 65 automated tests pass, including Signal input/schema validation, source attribution without URL fetching, exact-text forwarding, direct media delivery, output privacy, zero scores, unavailable responses, and non-retrying error/timeout behavior.
+- The live Signal API accepted benign and synthetic wire-diversion text fixtures. The updated local MCP connector completed a public documentation excerpt, synthetic fraud text, and a PNG attachment against production Signal. Calls took 4.141–4.330 seconds. These used an API key and are not Microsoft-host OAuth tests.
+- The documentation excerpt returned suspicious while the synthetic wire-diversion text returned fraud and the PNG returned safe. These are observed responses, not an accuracy benchmark. The skill explains that educational descriptions of fraud can match categories and that reference examples are not quotes from the source.
+- Microsoft service validation passed for the release ZIP with the existing OAuth registration. No new scopes, client, or tenant permissions were requested. SHA-256: `6bb4c09419a92cac8b4591cf31f06f09d421532333da4e9196870a2e79a69832`.
+- Signal evidence: `signal-api-preflight.json`, `signal-local-mcp-live.json`, and `microsoft-package-validation-1.1.0.txt` in the ignored local evidence directory.
+
+Automatic selection is not yet tested. Microsoft explicitly documents context-based skill selection and unsupported plugin event hooks. Neither a successful direct Signal call nor a successful automatic-selection sample can establish universal web interception. The optional custom-instruction paragraph strengthens prompting but does not supply an enforcement boundary.
+
 ## Remaining release checks
 
-- Deploy the 1.0.1 server correction and reread the existing no-speech job from Cowork to verify the production result.
+- Deploy Signal and verify explicit tool execution plus ordinary web-query skill activation in Cowork. Package acceptance alone does not prove either.
 - Access-token refresh after expiry and upstream grant revocation/reconnection are not yet verified in the host. Automated rejection tests do not replace those lifecycle checks.
 - Speech-containing workspace attachments remain untested in Cowork; image, tone WAV, and mixed video/tone delivery are verified.
 - Public store submission, cross-tenant installation, and Microsoft review are not performed. The OAuth registration remains restricted to the home tenant.

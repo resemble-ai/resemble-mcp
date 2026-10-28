@@ -35,7 +35,7 @@ async def run(args):
             async with ClientSession(read, write) as session:
                 await session.initialize()
                 tools = await session.list_tools()
-                report["checks"].append({"name": "initialize_and_discover", "passed": len(tools.tools) == 6,
+                report["checks"].append({"name": "initialize_and_discover", "passed": len(tools.tools) == 7,
                                           "tools": [t.name for t in tools.tools]})
                 print("Connected and discovered", len(tools.tools), "tools", flush=True)
 
@@ -77,6 +77,25 @@ async def run(args):
 
                 try:
                     last_completed = None
+                    signal_inputs = []
+                    if args.signal:
+                        signal_inputs.extend([
+                            ("signal:benign_text", {"text": "The community garden opens at nine on Saturday. Volunteers will plant tomatoes and water the seedlings. Bring gardening gloves and a reusable water bottle. This is a synthetic integration test."}),
+                            ("signal:synthetic_fraud", {"text": "I am your chief executive. I need you to urgently wire fifty thousand dollars to a new account before close of business. Keep this confidential and do not call me or the finance team to verify. This request overrides the usual approval process."}),
+                        ])
+                    for filename in args.signal_file:
+                        path = Path(filename)
+                        signal_inputs.append(("signal:attachment:" + path.suffix,
+                            {"file": base64.b64encode(path.read_bytes()).decode(), "filename": path.name}))
+                    for label, arguments in signal_inputs:
+                        result = await call("score_signal_content", arguments)
+                        job = {"kind": label, "id": result.get("id"), "status": result.get("status"),
+                               "completed": result.get("assessment_available") is True,
+                               "verdict": result.get("verdict"), "top_category": result.get("top_category"),
+                               "coverage": result.get("coverage")}
+                        report["jobs"].append(job)
+                        save()
+                        print(label, "finished:", job["status"], "id:", job["id"], flush=True)
                     if args.detect_uuid:
                         result = await poll("get_media_detection", {"uuid": args.detect_uuid})
                         job = {"kind": "existing_media", "uuid": args.detect_uuid, "status": result["status"], "completed": result.get("completed")}
@@ -135,6 +154,8 @@ if __name__ == "__main__":
     p.add_argument("--url")
     p.add_argument("--text", action="store_true")
     p.add_argument("--question", action="store_true")
+    p.add_argument("--signal", action="store_true", help="Score benign and synthetic fraud text fixtures; consumes Signal credits.")
+    p.add_argument("--signal-file", action="append", default=[], help="Score a purpose-made media fixture with Signal.")
     p.add_argument("--detect-uuid", help="Resume an existing detection, optionally to ask a question; does not resubmit media.")
     p.add_argument("--wait-seconds", type=int, default=600)
     p.add_argument("--output", default="copilot/evidence/live-smoke.json")

@@ -1,7 +1,7 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.29/MicrosoftTeams.schema.json",
   "manifestVersion": "1.29",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "id": "72c6639e-278b-5823-a49a-7182206df136",
   "developer": {
     "name": "Resemble AI",
@@ -11,23 +11,24 @@
   },
   "name": {
     "short": "Resemble AI",
-    "full": "Resemble AI Authenticity for Copilot Cowork"
+    "full": "Resemble AI Authenticity and Signal for Copilot Cowork"
   },
   "description": {
-    "short": "Analyze media and text for AI generation with Resemble AI.",
-    "full": "Use Resemble AI to analyze audio, images, video, and text for synthetic content. Submit a media link or workspace attachment, retrieve detection results, and ask follow-up questions grounded in a completed report. Optional media intelligence adds context and supported audio source tracing helps investigate synthesis origins. Requires a Resemble account with access to the requested capabilities; analyses may consume account credits. Detection is probabilistic and does not establish identity, intent, factual truth, or legal proof."
+    "short": "Check media authenticity and screen web content for fraud with Resemble Signal.",
+    "full": "Analyze audio, images, video, and text for synthetic content, and screen retrieved public web content or selected text/media for fraud patterns with Resemble Signal. The web-fraud-check skill guides screening before using web sources and reports what was actually checked. Cowork chooses skills contextually; this plugin cannot intercept every web fetch or enforce a universal security gate. Submit media, retrieve detection results, and ask grounded follow-up questions. Requires a Resemble account with the requested capabilities; analyses may consume credits and Signal stores team submissions. Results are probabilistic: safe means no strong match to configured categories, not verified facts, website safety, identity, or absence of prompt injection."
   },
   "icons": {"color": "color.png", "outline": "outline.png"},
   "accentColor": "#579C87",
   "agentSkills": [
     {"folder": "./skills/media-authenticity"},
     {"folder": "./skills/text-authenticity"},
-    {"folder": "./skills/detection-brief"}
+    {"folder": "./skills/detection-brief"},
+    {"folder": "./skills/web-fraud-check"}
   ],
   "agentConnectors": [{
     "id": "resemble-authenticity",
     "displayName": "Resemble AI Authenticity",
-    "description": "Authenticated media and text detection with asynchronous results and grounded follow-up analysis.",
+    "description": "Authenticated authenticity analysis and Signal fraud screening of retrieved web content or selected media.",
     "toolSource": {"remoteMcpServer": {
       "mcpServerUrl": "https://mcp.resemble.ai/cowork/mcp",
       "authorization": {"type": "OAuthPluginVault", "referenceId": "${{RESEMBLE_OAUTH_REFERENCE_ID}}"}
