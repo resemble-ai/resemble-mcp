@@ -106,6 +106,51 @@ def test_file_is_uploaded_directly_without_public_hosting(client, upstream):
     assert b'name="zero_retention_mode"\r\n\r\ntrue' in request.content
 
 
+@pytest.mark.parametrize("tool,path", [
+    ("submit_media_detection", "/api/v2/detect"),
+    ("score_signal_content", "/api/v2/signal"),
+])
+@pytest.mark.parametrize("size", [5_103_010, 9_722_608, cs.MAX_FILE_BYTES])
+def test_large_attachments_survive_http_transport(client, upstream, tool, path, size):
+    """Exercise both body limiters, not just the tool's decoded-file check."""
+    requests, responses = upstream
+    responses[("POST", path)] = httpx.Response(200, json={"item": {
+        "uuid": UUID, "status": "processing", "id": 43,
+        "verdict": "safe", "top_category": {"name": "Reference", "score": 0.1},
+    }})
+    payload = b"x" * size
+    structured(call(client, tool, {
+        "file": base64.b64encode(payload).decode(), "filename": "large.png",
+    }))
+    submissions = [r for r in requests if r.method == "POST"]
+    assert len(submissions) == 1
+    assert submissions[0].url.path == path
+    assert "multipart/form-data" in submissions[0].headers["content-type"]
+    assert payload in submissions[0].content
+
+
+@pytest.mark.parametrize("tool", ["submit_media_detection", "score_signal_content"])
+@pytest.mark.parametrize("extra_bytes", [1, 3])
+def test_over_limit_attachment_never_reaches_upstream(client, upstream, tool, extra_bytes):
+    requests, _ = upstream
+    result = call(client, tool, {
+        "file": base64.b64encode(b"x" * (cs.MAX_FILE_BYTES + extra_bytes)).decode(),
+        "filename": "too-large.png",
+    })
+    assert result["isError"]
+    assert "10 MiB" in result["content"][0]["text"]
+    assert all(r.method == "GET" for r in requests)
+
+
+def test_real_http_body_ceiling_remains_bounded(client, upstream):
+    requests, _ = upstream
+    response = client.post("/cowork/mcp", headers=AUTH,
+                           content=b"x" * (cs.MAX_BODY_BYTES + 1))
+    assert response.status_code == 413
+    assert response.json() == {"error": "request_too_large"}
+    assert all(r.method == "GET" for r in requests)
+
+
 @pytest.mark.parametrize("arguments", [
     {}, {"url": "https://example.org/a.wav", "file": "AAAA", "filename": "a.wav"},
     {"url": "http://example.org/a.wav"}, {"url": "https://127.0.0.1/a.wav"},
