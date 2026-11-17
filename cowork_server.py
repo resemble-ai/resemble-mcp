@@ -64,6 +64,9 @@ def annotations(title: str, read_only: bool) -> ToolAnnotations:
 
 cowork_mcp = FastMCP(
     "resemble-cowork", stateless_http=True, json_response=True,
+    # Match the authenticated wrapper: a 10 MiB attachment expands to ~13.34
+    # MiB in base64 JSON, exceeding the SDK's default 4 MiB HTTP body limit.
+    max_request_body_size=MAX_BODY_BYTES,
     transport_security=TransportSecuritySettings(
         enable_dns_rebinding_protection=True,
         allowed_hosts=[urlsplit(PUBLIC_ORIGIN).netloc, "localhost", "127.0.0.1", "localhost:*", "127.0.0.1:*"],
